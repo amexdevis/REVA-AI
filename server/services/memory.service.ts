@@ -336,20 +336,55 @@ export class MemoryService {
     }));
   }
 
+  private lastRetrievalDiagnostics: {
+    lastSearchStatus: 'FOUND' | 'NOT_FOUND' | 'IDLE';
+    memoriesRetrieved: number;
+    topMemoryCategories: string[];
+    lastSearchTopic?: string;
+    timestamp?: string;
+  } = {
+    lastSearchStatus: 'IDLE',
+    memoriesRetrieved: 0,
+    topMemoryCategories: [],
+  };
+
+  public getRetrievalDiagnostics() {
+    return { ...this.lastRetrievalDiagnostics };
+  }
+
   /**
-   * Hybrid Memory Search:
+   * Smart Hybrid Memory Search:
    * Rank = (0.35 * semanticSim) + (0.25 * keywordScore) + (0.15 * importance) + (0.10 * recency) + (0.10 * confidence) + (0.05 * topicMatch)
+   * Resolves contradictions by preferring newer, active, higher-confidence memories.
+   * Returns top 3-8 relevant memories (default limit: 6).
    */
   public async searchMemories(
     query: string,
-    options?: { limit?: number; minScore?: number; category?: MemoryCategory }
+    options?: { limit?: number; minScore?: number; category?: MemoryCategory; topic?: string }
   ): Promise<MemoryRecord[]> {
-    const limit = options?.limit || 5;
+    const limit = options?.limit || 6;
     const active = this.getAllMemories(true);
-    if (active.length === 0) return [];
+    if (active.length === 0) {
+      this.lastRetrievalDiagnostics = {
+        lastSearchStatus: 'NOT_FOUND',
+        memoriesRetrieved: 0,
+        topMemoryCategories: [],
+        lastSearchTopic: options?.topic || query || 'none',
+        timestamp: new Date().toISOString(),
+      };
+      return [];
+    }
 
     if (!query || !query.trim()) {
-      return active.slice(0, limit);
+      const defaultSlice = active.slice(0, Math.min(limit, 8));
+      this.lastRetrievalDiagnostics = {
+        lastSearchStatus: defaultSlice.length > 0 ? 'FOUND' : 'NOT_FOUND',
+        memoriesRetrieved: defaultSlice.length,
+        topMemoryCategories: Array.from(new Set(defaultSlice.map((m) => m.category))),
+        lastSearchTopic: 'recent_general',
+        timestamp: new Date().toISOString(),
+      };
+      return defaultSlice;
     }
 
     const trimmedQuery = query.trim();
@@ -358,14 +393,17 @@ export class MemoryService {
 
     // FTS Keyword matches
     const ftsMatchedIds = new Set<string>();
-    try {
-      const ftsRows = this.db.prepare(`
-        SELECT id, rank FROM memories_fts WHERE memories_fts MATCH ? ORDER BY rank LIMIT 20
-      `).all(queryKeywords.join(' OR ')) as Array<{ id: string; rank: number }>;
-      ftsRows.forEach((r) => ftsMatchedIds.add(r.id));
-    } catch (_) {}
+    if (queryKeywords.length > 0) {
+      try {
+        const ftsRows = this.db.prepare(`
+          SELECT id, rank FROM memories_fts WHERE memories_fts MATCH ? ORDER BY rank LIMIT 25
+        `).all(queryKeywords.join(' OR ')) as Array<{ id: string; rank: number }>;
+        ftsRows.forEach((r) => ftsMatchedIds.add(r.id));
+      } catch (_) {}
+    }
 
     const now = Date.now();
+    const currentTopic = (options?.topic || this.workingMemory.getState().currentTopic || '').toLowerCase();
 
     const scored = await Promise.all(
       active.map(async (mem) => {
@@ -373,7 +411,7 @@ export class MemoryService {
           return { mem, score: -1, similarity: 0 };
         }
 
-        // 1. Semantic vector similarity
+        // 1. Semantic vector similarity (0.0 to 1.0)
         let memVec: number[];
         if (mem.embedding_json) {
           try {
@@ -386,27 +424,41 @@ export class MemoryService {
         }
         const semanticSim = this.embeddingService.cosineSimilarity(queryVec, memVec);
 
-        // 2. Keyword relevance
+        // 2. Keyword relevance with exact substring & token overlap
         const memKeywords = this.extractKeywords(mem.content);
-        const matches = queryKeywords.filter((k) => memKeywords.includes(k) || mem.content.toLowerCase().includes(k)).length;
-        const keywordScore = Math.min(1.0, (matches / Math.max(1, queryKeywords.length)) * 0.8 + (ftsMatchedIds.has(mem.id) ? 0.3 : 0));
+        const memContentLower = mem.content.toLowerCase();
+        const matches = queryKeywords.filter((k) => memKeywords.includes(k) || memContentLower.includes(k)).length;
+        
+        let keywordScore = queryKeywords.length > 0 ? matches / queryKeywords.length : 0.0;
+        if (ftsMatchedIds.has(mem.id)) {
+          keywordScore = Math.min(1.0, keywordScore + 0.3);
+        }
+        // Direct phrase match bonus
+        if (memContentLower.includes(trimmedQuery.toLowerCase())) {
+          keywordScore = Math.min(1.0, keywordScore + 0.4);
+        }
 
-        // 3. Recency factor (1.0 for recent, decaying slowly over 30 days)
+        // 3. Recency factor (1.0 for recent updates, decaying gracefully over 30 days)
         const updatedTime = new Date(mem.updated_at).getTime();
-        const ageDays = (now - updatedTime) / (1000 * 60 * 60 * 24);
+        const ageDays = Math.max(0, (now - updatedTime) / (1000 * 60 * 60 * 24));
         const recencyScore = Math.max(0.3, 1.0 - (ageDays / 30) * 0.5);
 
         // 4. Topic boost
-        const currentTopic = this.workingMemory.getState().currentTopic.toLowerCase();
-        const topicMatch = mem.content.toLowerCase().includes(currentTopic) ? 1.0 : 0.0;
+        let topicMatch = 0.0;
+        if (currentTopic && currentTopic !== 'general conversation' && currentTopic !== 'fresh session') {
+          if (memContentLower.includes(currentTopic) || (mem.project_id && currentTopic.includes(mem.project_id.toLowerCase()))) {
+            topicMatch = 1.0;
+          }
+        }
 
-        // Hybrid Weighted Formula
+        // Hybrid Weighted Formula:
+        // Rank = 0.35 * semanticSim + 0.25 * keywordScore + 0.15 * importance + 0.10 * recency + 0.10 * confidence + 0.05 * topicMatch
         const finalScore =
           0.35 * semanticSim +
           0.25 * keywordScore +
-          0.15 * mem.importance +
+          0.15 * (mem.importance ?? 0.8) +
           0.10 * recencyScore +
-          0.10 * mem.confidence +
+          0.10 * (mem.confidence ?? 0.9) +
           0.05 * topicMatch;
 
         return { mem, score: finalScore, similarity: semanticSim };
@@ -415,8 +467,9 @@ export class MemoryService {
 
     scored.sort((a, b) => b.score - a.score);
 
-    const minScore = options?.minScore ?? 0.25;
-    const topResults = scored.filter((s) => s.score >= minScore).slice(0, limit);
+    // Keep top results with a reasonable relevance threshold
+    const minScore = options?.minScore ?? 0.22;
+    const topResults = scored.filter((s) => s.score >= minScore).slice(0, Math.min(limit, 8));
 
     // Update access statistics for retrieved memories
     const nowIso = new Date().toISOString();
@@ -427,21 +480,33 @@ export class MemoryService {
     `);
 
     for (const res of topResults) {
-      updateAccessStmt.run(nowIso, res.mem.id);
+      try {
+        updateAccessStmt.run(nowIso, res.mem.id);
+      } catch (_) {}
       res.mem.last_accessed_at = nowIso;
       res.mem.access_count = (res.mem.access_count || 0) + 1;
       res.mem.score = +(res.score.toFixed(3));
       res.mem.similarity = +(res.similarity.toFixed(3));
     }
 
-    return topResults.map((s) => s.mem);
+    const results = topResults.map((s) => s.mem);
+
+    this.lastRetrievalDiagnostics = {
+      lastSearchStatus: results.length > 0 ? 'FOUND' : 'NOT_FOUND',
+      memoriesRetrieved: results.length,
+      topMemoryCategories: Array.from(new Set(results.map((m) => m.category))),
+      lastSearchTopic: options?.topic || query.substring(0, 30),
+      timestamp: nowIso,
+    };
+
+    return results;
   }
 
   /**
-   * Fast relevant memory retrieval for voice turn context
+   * Fast relevant memory retrieval for voice turn context (returns 3-8 memories)
    */
-  public async getRelevantMemories(query: string, limit = 5): Promise<MemoryRecord[]> {
-    return this.searchMemories(query, { limit });
+  public async getRelevantMemories(query: string, limit = 6): Promise<MemoryRecord[]> {
+    return this.searchMemories(query, { limit: Math.min(Math.max(limit, 3), 8) });
   }
 
   public updateMemory(
@@ -826,30 +891,39 @@ export class MemoryService {
   }
 
   /**
-   * Builds high-signal contextual prompt for Gemini Live model without blowing context tokens.
+   * Builds high-signal contextual prompt for Gemini Live model with smart memory retrieval.
+   * Retrieves approximately 3-8 most relevant memories without flooding tokens.
    */
-  public async getMemoryContextPrompt(userQuery?: string): Promise<string> {
+  public async getMemoryContextPrompt(userQuery?: string, topic?: string): Promise<string> {
     const parts: string[] = [];
 
     // 1. Working Memory
     const wmPrompt = this.workingMemory.getSummaryForPrompt();
     if (wmPrompt) parts.push(wmPrompt);
 
-    // 2. Top Relevant Semantic Memories (Top 3-6)
-    const memories = userQuery ? await this.getRelevantMemories(userQuery, 5) : this.getAllMemories(true).slice(0, 5);
+    // 2. Top Relevant Semantic Memories (Top 3-8 scored by hybrid search)
+    let memories: MemoryRecord[] = [];
+    if (userQuery && userQuery.trim()) {
+      memories = await this.searchMemories(userQuery, { limit: 6, topic });
+    } else {
+      memories = this.getAllMemories(true).slice(0, 6);
+    }
+
     if (memories.length > 0) {
       const memItems = memories
-        .map((m) => `- [${m.category}] ${m.content} (confidence: ${(m.confidence * 100).toFixed(0)}%)`)
+        .map((m) => `- [${m.category}] ${m.content} (importance: ${m.importance.toFixed(2)}, confidence: ${(m.confidence * 100).toFixed(0)}%)`)
         .join('\n');
-      parts.push(`RELEVANT USER MEMORIES (From local SQLite memory):\n${memItems}\n`);
+      parts.push(`RELEVANT ACTIVE MEMORIES:\n${memItems}\n`);
     }
 
     // 3. User Profile Summary if known
     const profile = this.getUserProfile();
     if (profile.preferences.length > 0 || profile.ui_preferences.length > 0 || profile.projects.length > 0) {
       const profileLines: string[] = [];
+      if (profile.name) profileLines.push(`- User Name: ${profile.name}`);
       if (profile.ui_preferences.length > 0) profileLines.push(`- UI Preferences: ${profile.ui_preferences.join('; ')}`);
       if (profile.projects.length > 0) profileLines.push(`- Projects: ${profile.projects.join('; ')}`);
+      if (profile.preferences.length > 0) profileLines.push(`- Key Preferences: ${profile.preferences.slice(0, 5).join('; ')}`);
       if (profileLines.length > 0) {
         parts.push(`STRUCTURED USER PROFILE:\n${profileLines.join('\n')}\n`);
       }

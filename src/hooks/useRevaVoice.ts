@@ -12,6 +12,8 @@ import {
   ProactiveEventType,
   ProactiveSettings,
   ProactiveDiagnosticsData,
+  ToolExecutionResult,
+  TimerItem,
 } from '../types/voice.types.js';
 import { AudioRecorder } from '../lib/audio/audio-recorder.js';
 import { AudioPlayer } from '../lib/audio/audio-player.js';
@@ -19,6 +21,10 @@ import { AudioPlayer } from '../lib/audio/audio-player.js';
 export function useRevaVoice(options?: {
   onMemoryUpdated?: () => void;
   onProactiveUpdated?: (diag: ProactiveDiagnosticsData) => void;
+  onToolExecuted?: (result: ToolExecutionResult) => void;
+  onTimerRing?: (timer: TimerItem) => void;
+  onOpenUrl?: (url: string) => void;
+  onClipboardSync?: (text: string) => void;
 }) {
   // Session & Voice state
   const [sessionState, setSessionState] = useState<VoiceSessionState>('OFFLINE');
@@ -234,9 +240,16 @@ export function useRevaVoice(options?: {
             break;
 
           case 'MEMORY_UPDATE':
-            updateDiagnostics({
-              lastEvent: 'MEMORY_DATABASE_CHANGED',
-            });
+            if (msg.memoryRetrieval) {
+              updateDiagnostics({
+                memoryRetrieval: msg.memoryRetrieval,
+                lastEvent: 'MEMORY_RETRIEVED',
+              });
+            } else {
+              updateDiagnostics({
+                lastEvent: 'MEMORY_DATABASE_CHANGED',
+              });
+            }
             if (options?.onMemoryUpdated) {
               options.onMemoryUpdated();
             }
@@ -258,6 +271,42 @@ export function useRevaVoice(options?: {
             if (msg.text) {
               addTranscript('reva', msg.text);
               updateDiagnostics({ lastEvent: 'PROACTIVE_SPEECH_TRIGGERED' });
+            }
+            break;
+
+          case 'TOOL_EXECUTED':
+            if (msg.toolResult) {
+              updateDiagnostics({ lastEvent: `TOOL_EXECUTED_${msg.toolResult.tool}` });
+              if (options?.onToolExecuted) {
+                options.onToolExecuted(msg.toolResult);
+              }
+            }
+            break;
+
+          case 'TIMER_RING':
+            if (msg.timer) {
+              updateDiagnostics({ lastEvent: `TIMER_RING_${msg.timer.label}` });
+              if (options?.onTimerRing) {
+                options.onTimerRing(msg.timer);
+              }
+            }
+            break;
+
+          case 'OPEN_URL':
+            if (msg.url) {
+              updateDiagnostics({ lastEvent: `OPEN_URL_${msg.url}` });
+              if (options?.onOpenUrl) {
+                options.onOpenUrl(msg.url);
+              }
+            }
+            break;
+
+          case 'CLIPBOARD_SYNC':
+            if (typeof msg.text === 'string') {
+              updateDiagnostics({ lastEvent: 'CLIPBOARD_SYNC' });
+              if (options?.onClipboardSync) {
+                options.onClipboardSync(msg.text);
+              }
             }
             break;
 
@@ -523,6 +572,31 @@ export function useRevaVoice(options?: {
     };
   }, []);
 
+  // Execute tool through WebSocket
+  const executeToolViaWs = useCallback((toolName: string, toolArgs?: Record<string, any>) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'EXECUTE_TOOL',
+          toolName,
+          toolArgs: toolArgs || {},
+        })
+      );
+    }
+  }, []);
+
+  // Send clipboard paste to server
+  const sendClipboardPaste = useCallback((clipboardText: string) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'CLIPBOARD_PASTE',
+          clipboardText,
+        })
+      );
+    }
+  }, []);
+
   return {
     sessionState,
     micState,
@@ -539,5 +613,7 @@ export function useRevaVoice(options?: {
     testGreeting,
     sendProactiveEvent,
     sendProactiveSettingsUpdate,
+    executeToolViaWs,
+    sendClipboardPaste,
   };
 }

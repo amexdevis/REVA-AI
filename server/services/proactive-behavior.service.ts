@@ -132,6 +132,10 @@ export class ProactiveBehaviorService {
     }
   }
 
+  public getCurrentWorkspaceApp(): string {
+    return this.currentWorkspaceApp;
+  }
+
   public getDiagnostics(): ProactiveDiagnosticsData {
     const cooldownRemainingMs = Math.max(
       0,

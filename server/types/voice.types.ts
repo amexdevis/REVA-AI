@@ -130,6 +130,14 @@ export interface ConsolidationReport {
   timestamp: string;
 }
 
+export interface MemoryRetrievalDiagnostics {
+  lastSearchStatus: 'FOUND' | 'NOT_FOUND' | 'IDLE';
+  memoriesRetrieved: number;
+  topMemoryCategories: string[];
+  lastSearchTopic?: string;
+  timestamp?: string;
+}
+
 export interface PersonalityDiagnosticsData {
   mode: ConversationMode;
   userEmotion: UserEmotionEstimate;
@@ -204,6 +212,8 @@ export interface ProactiveDiagnosticsData {
   idleSeconds: number;
 }
 
+export * from './tools.types.js';
+
 export interface ClientVoiceMessage {
   type:
     | 'CONNECT'
@@ -214,9 +224,14 @@ export interface ClientVoiceMessage {
     | 'TEST_GREETING'
     | 'PROACTIVE_EVENT'
     | 'UPDATE_PROACTIVE_SETTINGS'
+    | 'CLIPBOARD_PASTE'
+    | 'EXECUTE_TOOL'
     | 'DISCONNECT';
   audio?: string; // Base64 PCM 16kHz mono
   text?: string;
+  toolName?: string;
+  toolArgs?: Record<string, any>;
+  clipboardText?: string;
   event?: Partial<ProactiveEvent>;
   settings?: Partial<ProactiveSettings>;
 }
@@ -232,6 +247,10 @@ export interface ServerVoiceMessage {
     | 'MEMORY_UPDATE'
     | 'PROACTIVE_UPDATE'
     | 'PROACTIVE_SPEECH'
+    | 'TOOL_EXECUTED'
+    | 'TIMER_RING'
+    | 'CLIPBOARD_SYNC'
+    | 'OPEN_URL'
     | 'DIAGNOSTIC'
     | 'ERROR';
   state?: VoiceSessionState;
@@ -242,8 +261,12 @@ export interface ServerVoiceMessage {
   code?: number;
   reason?: string;
   event?: string;
+  url?: string;
+  toolResult?: any;
+  timer?: any;
   personality?: PersonalityDiagnosticsData;
   memories?: MemoryRecord[];
+  memoryRetrieval?: MemoryRetrievalDiagnostics;
   proactive?: ProactiveDiagnosticsData;
   details?: Record<string, unknown>;
 }

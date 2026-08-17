@@ -34,19 +34,34 @@ memoryRouter.get('/', (req: Request, res: Response) => {
 memoryRouter.get('/search', async (req: Request, res: Response) => {
   try {
     const query = (req.query.q as string) || '';
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 5;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 6;
     const category = req.query.category as MemoryCategory | undefined;
+    const topic = req.query.topic as string | undefined;
 
-    const results = await memoryService.searchMemories(query, { limit, category });
+    const results = await memoryService.searchMemories(query, { limit, category, topic });
     res.json({
       success: true,
       query,
       count: results.length,
       results,
+      diagnostics: memoryService.getRetrievalDiagnostics(),
     });
   } catch (err: any) {
     console.error('[REVA][API] Error searching memories:', err);
     res.status(500).json({ success: false, error: err?.message || 'Search failed' });
+  }
+});
+
+// GET /api/memory/diagnostics - Smart Memory Retrieval Diagnostics
+memoryRouter.get('/diagnostics', (req: Request, res: Response) => {
+  try {
+    const diagnostics = memoryService.getRetrievalDiagnostics();
+    res.json({
+      success: true,
+      diagnostics,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message });
   }
 });
 

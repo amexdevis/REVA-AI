@@ -7,7 +7,9 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import { healthRouter } from './routes/health.route.js';
 import { configRouter } from './routes/config.route.js';
 import { memoryRouter } from './routes/memory.router.js';
+import { sheetsMemoryRouter } from './routes/sheets-memory.router.js';
 import proactiveRouter from './routes/proactive.router.js';
+import { toolsRouter } from './routes/tools.router.js';
 import { GeminiService } from './services/gemini.service.js';
 
 export function createRevaServer(): Express {
@@ -27,8 +29,10 @@ export function createRevaServer(): Express {
   // Register API routes
   app.use('/api', healthRouter);
   app.use('/api', configRouter);
+  app.use('/api/memory/sheets', sheetsMemoryRouter);
   app.use('/api/memory', memoryRouter);
   app.use('/api/proactive', proactiveRouter);
+  app.use('/api/tools', toolsRouter);
 
   // 404 handler for API routes
   app.use('/api/*', (_req: Request, res: Response) => {

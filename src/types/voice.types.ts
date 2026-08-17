@@ -219,6 +219,14 @@ export interface VoiceTranscriptItem {
   timestamp: string;
 }
 
+export interface MemoryRetrievalDiagnostics {
+  lastSearchStatus: 'FOUND' | 'NOT_FOUND' | 'IDLE';
+  memoriesRetrieved: number;
+  topMemoryCategories: string[];
+  lastSearchTopic?: string;
+  timestamp?: string;
+}
+
 export interface VoiceDiagnostics {
   revaVoiceState: VoiceSessionState;
   geminiLiveState: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
@@ -233,5 +241,117 @@ export interface VoiceDiagnostics {
   reconnectAttempts: number;
   personality: PersonalityDiagnosticsData;
   memoryCount?: number;
+  memoryRetrieval?: MemoryRetrievalDiagnostics;
   proactive?: ProactiveDiagnosticsData;
+}
+
+export type ToolPermissionLevel = 'READ_ONLY' | 'REVERSIBLE' | 'SENSITIVE' | 'DESTRUCTIVE';
+
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  permission: ToolPermissionLevel;
+  parameters: Record<string, any>;
+  requiresConfirmation?: boolean;
+}
+
+export interface ToolExecutionResult {
+  tool: string;
+  executionId: string;
+  success: boolean;
+  result?: any;
+  error?: string;
+  permission: ToolPermissionLevel;
+  executionTimeMs: number;
+  timestamp: string;
+}
+
+export interface SystemStatusData {
+  platform: string;
+  hostname: string;
+  architecture: string;
+  cpuCount: number;
+  loadAverage: number[];
+  totalMemoryMb: number;
+  freeMemoryMb: number;
+  usedMemoryMb: number;
+  memoryUsagePercentage: number;
+  uptimeSeconds: number;
+  uptimeFormatted: string;
+  activeWindow: string;
+  currentTime: string;
+}
+
+export interface NoteItem {
+  id: string;
+  title: string;
+  content: string;
+  tags?: string[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TimerItem {
+  id: string;
+  label: string;
+  durationSeconds: number;
+  remainingSeconds: number;
+  status: 'RUNNING' | 'COMPLETED' | 'CANCELLED';
+  createdAt: string;
+  endsAt: string;
+}
+
+export interface ServerVoiceMessage {
+  type:
+    | 'SESSION_STATE'
+    | 'AUDIO_OUTPUT'
+    | 'INTERRUPTED'
+    | 'TURN_COMPLETE'
+    | 'TRANSCRIPT'
+    | 'EMOTION_UPDATE'
+    | 'MEMORY_UPDATE'
+    | 'PROACTIVE_UPDATE'
+    | 'PROACTIVE_SPEECH'
+    | 'TOOL_EXECUTED'
+    | 'TIMER_RING'
+    | 'CLIPBOARD_SYNC'
+    | 'OPEN_URL'
+    | 'ERROR';
+  state?: VoiceSessionState;
+  audio?: string;
+  role?: 'user' | 'reva';
+  text?: string;
+  personality?: PersonalityDiagnosticsData;
+  proactive?: ProactiveDiagnosticsData;
+  toolResult?: ToolExecutionResult;
+  timer?: TimerItem;
+  url?: string;
+  event?: string;
+  error?: string;
+  code?: number;
+  reason?: string;
+  details?: Record<string, unknown>;
+}
+
+export interface ClientVoiceMessage {
+  type:
+    | 'CONNECT'
+    | 'DISCONNECT'
+    | 'AUDIO_INPUT'
+    | 'INTERRUPT'
+    | 'TEST_GREETING'
+    | 'PROACTIVE_EVENT'
+    | 'UPDATE_PROACTIVE_SETTINGS'
+    | 'EXECUTE_TOOL'
+    | 'CLIPBOARD_PASTE';
+  audio?: string;
+  text?: string;
+  event?: {
+    type: ProactiveEventType;
+    context?: Record<string, any>;
+  };
+  settings?: Partial<ProactiveSettings>;
+  toolName?: string;
+  toolArgs?: Record<string, any>;
+  clipboardText?: string;
 }

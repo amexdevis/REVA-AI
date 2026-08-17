@@ -1,1 +1,148 @@
 @import "tailwindcss";
+
+@layer utilities {
+  /* Natural biological breathing with multi-phase expansion */
+  @keyframes reva-breathe-lifelike {
+    0% {
+      transform: translateY(0px) scale(1, 1);
+    }
+    38% {
+      /* Inhale phase */
+      transform: translateY(-3.5px) scale(1.006, 1.01);
+    }
+    48% {
+      /* Peak breath pause */
+      transform: translateY(-3.2px) scale(1.005, 1.009);
+    }
+    85% {
+      /* Exhale phase */
+      transform: translateY(0.5px) scale(0.998, 0.997);
+    }
+    100% {
+      transform: translateY(0px) scale(1, 1);
+    }
+  }
+
+  /* Gentle organic hair and silhouette floating */
+  @keyframes reva-ambient-sway {
+    0% {
+      transform: rotate(0deg) skewX(0deg);
+    }
+    25% {
+      transform: rotate(0.35deg) skewX(0.2deg);
+    }
+    50% {
+      transform: rotate(-0.25deg) skewX(-0.15deg);
+    }
+    75% {
+      transform: rotate(0.2deg) skewX(0.1deg);
+    }
+    100% {
+      transform: rotate(0deg) skewX(0deg);
+    }
+  }
+
+  /* Ambient light sheen moving across character */
+  @keyframes reva-light-sheen {
+    0% {
+      background-position: -200% 0;
+      opacity: 0.15;
+    }
+    50% {
+      opacity: 0.35;
+    }
+    100% {
+      background-position: 200% 0;
+      opacity: 0.15;
+    }
+  }
+
+  /* Smooth Holographic Rotations */
+  @keyframes holo-spin-cw {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes holo-spin-ccw {
+    from {
+      transform: rotate(360deg);
+    }
+    to {
+      transform: rotate(0deg);
+    }
+  }
+
+  /* Atmospheric Aura Pulse */
+  @keyframes aura-pulse {
+    0%, 100% {
+      opacity: 0.45;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.75;
+      transform: scale(1.04);
+    }
+  }
+
+  /* Ground Platform Ring Pulse */
+  @keyframes ring-pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 0.35;
+    }
+    50% {
+      transform: scale(1.06);
+      opacity: 0.7;
+    }
+  }
+
+  .animate-reva-breathe {
+    animation: reva-breathe-lifelike 5.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    transform-origin: center 45%;
+    will-change: transform;
+  }
+
+  .animate-reva-sway {
+    animation: reva-ambient-sway 11.5s ease-in-out infinite;
+    transform-origin: center bottom;
+    will-change: transform;
+  }
+
+  .animate-holo-cw {
+    animation: holo-spin-cw 28s linear infinite;
+    will-change: transform;
+  }
+
+  .animate-holo-ccw {
+    animation: holo-spin-ccw 20s linear infinite;
+    will-change: transform;
+  }
+
+  .animate-aura-pulse {
+    animation: aura-pulse 4.2s ease-in-out infinite;
+  }
+
+  .animate-ring-pulse {
+    animation: ring-pulse 3.2s ease-in-out infinite;
+  }
+}
+
+/* Custom scrollbar for modals */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #090514;
+}
+::-webkit-scrollbar-thumb {
+  background: #2e1065;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #581c87;
+}

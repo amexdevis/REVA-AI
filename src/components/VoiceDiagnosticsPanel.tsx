@@ -235,6 +235,51 @@ export const VoiceDiagnosticsPanel: React.FC<VoiceDiagnosticsPanelProps> = ({
         </div>
       </div>
 
+      {/* Smart Memory Recall Diagnostics (Step 3) */}
+      <div id="diag-smart-memory" className="mb-4 p-3 rounded-lg bg-zinc-950/80 border border-zinc-800 font-mono text-xs space-y-2">
+        <div className="flex items-center justify-between pb-1.5 border-b border-zinc-800/70">
+          <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[11px]">
+            Smart Memory Recall Engine
+          </span>
+          <span className={`text-[10px] px-2 py-0.5 rounded border ${
+            diagnostics.memoryRetrieval?.lastSearchStatus === 'FOUND'
+              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+              : diagnostics.memoryRetrieval?.lastSearchStatus === 'NOT_FOUND'
+              ? 'bg-amber-950/80 text-amber-300 border-amber-800'
+              : 'bg-zinc-900 text-zinc-400 border-zinc-700'
+          }`}>
+            {diagnostics.memoryRetrieval?.lastSearchStatus === 'FOUND'
+              ? 'ACTIVE RECALL'
+              : diagnostics.memoryRetrieval?.lastSearchStatus === 'NOT_FOUND'
+              ? 'NO MATCH'
+              : 'IDLE'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+          <div className="p-2 rounded bg-zinc-900/60 border border-zinc-800/60">
+            <span className="text-[10px] text-zinc-500 block uppercase">Retrieved Facts</span>
+            <span className="font-bold text-cyan-300">
+              {diagnostics.memoryRetrieval?.memoriesRetrieved ?? 0} memories
+            </span>
+          </div>
+          <div className="p-2 rounded bg-zinc-900/60 border border-zinc-800/60">
+            <span className="text-[10px] text-zinc-500 block uppercase">Last Search Focus</span>
+            <span className="font-bold text-zinc-200 truncate block" title={diagnostics.memoryRetrieval?.lastSearchTopic || 'None'}>
+              {diagnostics.memoryRetrieval?.lastSearchTopic || 'None'}
+            </span>
+          </div>
+          <div className="p-2 rounded bg-zinc-900/60 border border-zinc-800/60 col-span-2 sm:col-span-1">
+            <span className="text-[10px] text-zinc-500 block uppercase">Active Categories</span>
+            <span className="font-medium text-emerald-300 truncate block">
+              {diagnostics.memoryRetrieval?.topMemoryCategories?.length
+                ? diagnostics.memoryRetrieval.topMemoryCategories.join(', ')
+                : 'General'}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Meta events info */}
       <div className="space-y-1.5 p-3 rounded bg-zinc-950/90 border border-zinc-800/90 font-mono text-[11px]">
         <div className="flex justify-between text-zinc-400">

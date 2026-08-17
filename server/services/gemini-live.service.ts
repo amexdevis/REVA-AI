@@ -11,6 +11,7 @@ import { MemoryCategory } from '../types/voice.types.js';
 import { WorkingMemoryService } from './working-memory.service.js';
 import { MemoryConsolidationService } from './memory-consolidation.service.js';
 import { ProactiveBehaviorService } from './proactive-behavior.service.js';
+import { ToolExecutionService } from './tool-execution.service.js';
 
 export interface GeminiLiveCallbacks {
   onAudioData: (base64Audio: string) => void;
@@ -19,7 +20,9 @@ export interface GeminiLiveCallbacks {
   onTranscript?: (role: 'user' | 'reva', text: string) => void;
   onEmotionUpdate?: (data: PersonalityDiagnosticsData) => void;
   onMemoryUpdate?: () => void;
+  onMemoryRetrieval?: (diagnostics: any) => void;
   onProactiveUpdate?: () => void;
+  onToolExecuted?: (result: any) => void;
   onStateChange: (state: string, details?: Record<string, unknown>) => void;
   onError: (err: Error | unknown) => void;
   onClose: (code: number, reason: string) => void;
@@ -34,12 +37,14 @@ export class GeminiLiveService {
   private personality: RevaPersonalityService;
   private memoryService: MemoryService;
   private proactiveService: ProactiveBehaviorService;
+  private toolService: ToolExecutionService;
 
   constructor(callbacks: GeminiLiveCallbacks) {
     this.callbacks = callbacks;
     this.personality = new RevaPersonalityService();
     this.memoryService = MemoryService.getInstance();
     this.proactiveService = ProactiveBehaviorService.getInstance();
+    this.toolService = ToolExecutionService.getInstance();
   }
 
   public getModelName(): string {
@@ -157,6 +162,208 @@ export class GeminiLiveService {
                     required: ['confirmed'],
                   },
                 },
+                {
+                  name: 'get_system_status',
+                  description: 'Retrieve real operating system information, CPU load, and memory usage metrics.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
+                  },
+                },
+                {
+                  name: 'get_active_application',
+                  description: 'Detect the currently focused active window, application, or workspace context.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
+                  },
+                },
+                {
+                  name: 'get_current_time',
+                  description: 'Get the exact current date, time, day of the week, and timezone.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
+                  },
+                },
+                {
+                  name: 'open_website',
+                  description: 'Open a verified web URL in the browser (e.g. YouTube, GitHub, Google, docs).',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      url: {
+                        type: Type.STRING,
+                        description: 'The website URL to open (e.g. "https://youtube.com" or "github.com")',
+                      },
+                    },
+                    required: ['url'],
+                  },
+                },
+                {
+                  name: 'open_application',
+                  description: 'Open a standard local application on the host system (Chrome, VS Code, Terminal, Calculator, etc.).',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      appName: {
+                        type: Type.STRING,
+                        description: 'Name of application to open: chrome, vs code, terminal, calculator, notepad, spotify, vlc',
+                      },
+                    },
+                    required: ['appName'],
+                  },
+                },
+                {
+                  name: 'read_clipboard',
+                  description: 'Read the current text content from the user clipboard buffer.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
+                  },
+                },
+                {
+                  name: 'write_clipboard',
+                  description: 'Copy text to the user clipboard buffer.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      text: {
+                        type: Type.STRING,
+                        description: 'The text to copy to the clipboard',
+                      },
+                    },
+                    required: ['text'],
+                  },
+                },
+                {
+                  name: 'search_files',
+                  description: 'Search for files by name or extension in the local workspace directory.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      query: {
+                        type: Type.STRING,
+                        description: 'File name keyword or search phrase',
+                      },
+                      directory: {
+                        type: Type.STRING,
+                        description: 'Optional subfolder to search within',
+                      },
+                      extension: {
+                        type: Type.STRING,
+                        description: 'Optional file extension filter (e.g. "ts", "json", "md")',
+                      },
+                    },
+                    required: ['query'],
+                  },
+                },
+                {
+                  name: 'create_note',
+                  description: 'Create and save a local note with title and content for future reference.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: {
+                        type: Type.STRING,
+                        description: 'A short descriptive title for the note',
+                      },
+                      content: {
+                        type: Type.STRING,
+                        description: 'The note text or information to save',
+                      },
+                      tags: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING },
+                        description: 'Optional tag keywords',
+                      },
+                    },
+                    required: ['content'],
+                  },
+                },
+                {
+                  name: 'get_notes',
+                  description: 'Retrieve saved local notes, optionally filtering by search query.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      query: {
+                        type: Type.STRING,
+                        description: 'Optional keyword to search notes by',
+                      },
+                    },
+                  },
+                },
+                {
+                  name: 'delete_note',
+                  description: 'Delete a previously saved note by ID or title.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      idOrTitle: {
+                        type: Type.STRING,
+                        description: 'Note ID or exact note title to remove',
+                      },
+                    },
+                    required: ['idOrTitle'],
+                  },
+                },
+                {
+                  name: 'set_timer',
+                  description: 'Set a countdown timer in seconds or minutes with an optional label.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      durationSeconds: {
+                        type: Type.NUMBER,
+                        description: 'Timer duration in seconds (e.g. 60 for 1 minute, 1200 for 20 minutes)',
+                      },
+                      minutes: {
+                        type: Type.NUMBER,
+                        description: 'Alternative duration specified in minutes',
+                      },
+                      label: {
+                        type: Type.STRING,
+                        description: 'Optional label or purpose of the timer (e.g. "tea", "code review")',
+                      },
+                    },
+                  },
+                },
+                {
+                  name: 'list_timers',
+                  description: 'List all active or recently completed countdown timers.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
+                  },
+                },
+                {
+                  name: 'cancel_timer',
+                  description: 'Cancel an active timer by ID or label.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      idOrLabel: {
+                        type: Type.STRING,
+                        description: 'Timer ID or label to cancel',
+                      },
+                    },
+                    required: ['idOrLabel'],
+                  },
+                },
+                {
+                  name: 'list_running_applications',
+                  description: 'List currently running system processes and application instances.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      limit: {
+                        type: Type.NUMBER,
+                        description: 'Maximum processes to return (default 15)',
+                      },
+                    },
+                  },
+                },
               ],
             },
           ],
@@ -234,10 +441,21 @@ export class GeminiLiveService {
             } else {
               result = { status: 'aborted', message: 'User confirmation was not provided.' };
             }
+          } else {
+            // General System & Jarvis Tool Execution
+            const toolExec = await this.toolService.executeTool(name, args || {});
+            if (toolExec.success) {
+              result = toolExec.result || { success: true, message: 'Completed' };
+            } else {
+              result = { success: false, error: toolExec.error || 'Operation failed' };
+            }
+            if (this.callbacks.onToolExecuted) {
+              this.callbacks.onToolExecuted(toolExec);
+            }
           }
-        } catch (memErr) {
-          console.error(`[REVA][MEMORY] Error executing tool ${name}:`, memErr);
-          result = { status: 'error', message: 'Failed to access local memory database' };
+        } catch (memErr: any) {
+          console.error(`[REVA][TOOLS] Error executing tool ${name}:`, memErr);
+          result = { status: 'error', message: memErr?.message || 'Failed to execute requested tool operation' };
         }
 
         functionResponses.push({
@@ -293,6 +511,13 @@ export class GeminiLiveService {
 
           // Deterministic memory extraction fallback to guarantee database synchronization
           this.extractExplicitVoiceMemory(userText);
+
+          // Smart Memory Retrieval: Search relevant memories for current user utterance in background
+          this.memoryService.searchMemories(userText, { limit: 6 }).then((results) => {
+            if (this.callbacks.onMemoryRetrieval) {
+              this.callbacks.onMemoryRetrieval(this.memoryService.getRetrievalDiagnostics());
+            }
+          }).catch(() => {});
 
           // Check for natural voice commands for proactive / quiet modes
           const voiceCmd = this.proactiveService.handleNaturalVoiceCommand(userText);

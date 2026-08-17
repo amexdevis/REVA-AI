@@ -7,10 +7,12 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { IncomingMessage } from 'http';
 import { GeminiLiveService } from '../services/gemini-live.service.js';
 import { ProactiveBehaviorService } from '../services/proactive-behavior.service.js';
+import { ToolExecutionService } from '../services/tool-execution.service.js';
 import { ClientVoiceMessage, ServerVoiceMessage } from '../types/voice.types.js';
 
 export function setupVoiceWebSocket(wss: WebSocketServer) {
   const proactiveService = ProactiveBehaviorService.getInstance();
+  const toolService = ToolExecutionService.getInstance();
 
   wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     console.log('[REVA][WS] Client connected to Voice WebSocket endpoint');
@@ -24,9 +26,43 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
       }
     };
 
+    // Wire up tool service events for this client connection
+    const unsubscribeToolExecuted = toolService.onToolExecuted((result) => {
+      sendMessage({
+        type: 'TOOL_EXECUTED',
+        toolResult: result,
+      });
+    });
+
+    const unsubscribeTimer = toolService.onTimerTriggered((timer) => {
+      sendMessage({
+        type: 'TIMER_RING',
+        timer,
+      });
+    });
+
+    const unsubscribeUrl = toolService.onUrlOpen((url) => {
+      sendMessage({
+        type: 'OPEN_URL',
+        url,
+      });
+    });
+
+    const unsubscribeClipboard = toolService.onClipboardUpdate((text) => {
+      sendMessage({
+        type: 'CLIPBOARD_SYNC',
+        text,
+      });
+    });
+
     const cleanup = async () => {
       if (isTerminated) return;
       isTerminated = true;
+
+      unsubscribeToolExecuted();
+      unsubscribeTimer();
+      unsubscribeUrl();
+      unsubscribeClipboard();
 
       console.log('[REVA][WS] Cleaning up client voice session');
       if (geminiLive) {
@@ -78,10 +114,23 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
             event: 'MEMORY_DATABASE_CHANGED',
           });
         },
+        onMemoryRetrieval: (retrievalDiagnostics) => {
+          sendMessage({
+            type: 'MEMORY_UPDATE',
+            event: 'MEMORY_RETRIEVED',
+            memoryRetrieval: retrievalDiagnostics,
+          });
+        },
         onProactiveUpdate: () => {
           sendMessage({
             type: 'PROACTIVE_UPDATE',
             proactive: proactiveService.getDiagnostics(),
+          });
+        },
+        onToolExecuted: (result) => {
+          sendMessage({
+            type: 'TOOL_EXECUTED',
+            toolResult: result,
           });
         },
         onStateChange: (state, details) => {
@@ -133,6 +182,22 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
           case 'AUDIO_INPUT':
             if (payload.audio && geminiLive) {
               geminiLive.sendAudioChunk(payload.audio);
+            }
+            break;
+
+          case 'EXECUTE_TOOL':
+            if (payload.toolName) {
+              const execRes = await toolService.executeTool(payload.toolName, payload.toolArgs || {});
+              sendMessage({
+                type: 'TOOL_EXECUTED',
+                toolResult: execRes,
+              });
+            }
+            break;
+
+          case 'CLIPBOARD_PASTE':
+            if (typeof payload.clipboardText === 'string') {
+              await toolService.executeTool('write_clipboard', { text: payload.clipboardText });
             }
             break;
 
