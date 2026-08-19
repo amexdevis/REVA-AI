@@ -12,6 +12,7 @@ import { WorkingMemoryService } from './working-memory.service.js';
 import { MemoryConsolidationService } from './memory-consolidation.service.js';
 import { ProactiveBehaviorService } from './proactive-behavior.service.js';
 import { ToolExecutionService } from './tool-execution.service.js';
+import { ContextAwarenessService } from './context-awareness.service.js';
 
 export interface GeminiLiveCallbacks {
   onAudioData: (base64Audio: string) => void;
@@ -212,6 +213,101 @@ export class GeminiLiveService {
                       },
                     },
                     required: ['appName'],
+                  },
+                },
+                {
+                  name: 'close_application',
+                  description: 'Safely close or quit an open application (e.g. Chrome, Spotify, VS Code).',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      appName: {
+                        type: Type.STRING,
+                        description: 'Name of application to close (e.g. "chrome", "spotify", "vscode")',
+                      },
+                    },
+                    required: ['appName'],
+                  },
+                },
+                {
+                  name: 'focus_application',
+                  description: 'Switch to or focus a running application window (e.g. "focus Chrome", "switch to VS Code").',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      appName: {
+                        type: Type.STRING,
+                        description: 'Name of application to focus (e.g. "chrome", "vscode", "terminal")',
+                      },
+                    },
+                    required: ['appName'],
+                  },
+                },
+                {
+                  name: 'focus_window',
+                  description: 'Focus a specific active window by title or application name.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      windowName: {
+                        type: Type.STRING,
+                        description: 'Window title or application name to focus',
+                      },
+                    },
+                    required: ['windowName'],
+                  },
+                },
+                {
+                  name: 'minimize_window',
+                  description: 'Minimize the currently active window or a specified window.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      windowName: {
+                        type: Type.STRING,
+                        description: 'Optional window title or application name to minimize',
+                      },
+                    },
+                  },
+                },
+                {
+                  name: 'maximize_window',
+                  description: 'Maximize the currently active window or a specified window.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      windowName: {
+                        type: Type.STRING,
+                        description: 'Optional window title or application name to maximize',
+                      },
+                    },
+                  },
+                },
+                {
+                  name: 'restore_window',
+                  description: 'Restore the currently active window or a specified window to normal size.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      windowName: {
+                        type: Type.STRING,
+                        description: 'Optional window title or application name to restore',
+                      },
+                    },
+                  },
+                },
+                {
+                  name: 'close_window',
+                  description: 'Close a specific active window by title.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      windowName: {
+                        type: Type.STRING,
+                        description: 'Window title or application name to close',
+                      },
+                    },
+                    required: ['windowName'],
                   },
                 },
                 {
@@ -489,6 +585,7 @@ export class GeminiLiveService {
             this.callbacks.onTranscript('reva', part.text);
           }
           WorkingMemoryService.getInstance().addTurn('reva', part.text);
+          ContextAwarenessService.getInstance().processRevaTurn(part.text);
           const updatedDiag = this.personality.analyzeTranscript('reva', part.text);
           if (this.callbacks.onEmotionUpdate) {
             this.callbacks.onEmotionUpdate(updatedDiag);
@@ -508,6 +605,7 @@ export class GeminiLiveService {
             this.callbacks.onTranscript('user', userText);
           }
           WorkingMemoryService.getInstance().addTurn('user', userText);
+          ContextAwarenessService.getInstance().processUserTurn(userText);
 
           // Deterministic memory extraction fallback to guarantee database synchronization
           this.extractExplicitVoiceMemory(userText);
@@ -596,12 +694,24 @@ export class GeminiLiveService {
         }
       }
 
-      // Check "forget that..." or "forget about..."
-      const forgetMatch = lower.match(/\b(?:forget\s+(?:that\s+|about\s+)?)(.+)/i);
+      // Check boundaries: "Don't bring that up again", "Don't bring that topic up", "Let's change the subject", "Don't remember this"
+      const suppressMatch = lower.match(/\b(?:don't\s+bring\s+(?:that|this)\s+(?:topic\s+)?up(?:\s+again)?|drop\s+(?:that|this)\s+topic|change\s+the\s+subject)\b/i);
+      if (suppressMatch) {
+        const workingMemory = WorkingMemoryService.getInstance();
+        const currentTopic = workingMemory.getState().currentTopic;
+        if (currentTopic) {
+          workingMemory.suppressTopic(currentTopic);
+        }
+        console.log(`[REVA][BOUNDARY] Topic suppressed on user boundary request: ${currentTopic}`);
+      }
+
+      // Check "forget that..." or "forget about..." or "don't remember this"
+      const forgetMatch = lower.match(/\b(?:forget\s+(?:that\s+|about\s+)?|don't\s+remember\s+(?:that\s+|this\s+)?)(.+)/i);
       if (forgetMatch && forgetMatch[1]) {
         const query = forgetMatch[1].trim().replace(/[.?!\s]+$/, '');
         if (query.length > 2 && !query.includes('everything')) {
           await this.memoryService.handleVoiceMemoryCommand(`forget that ${query}`);
+          WorkingMemoryService.getInstance().suppressTopic(query);
           this.callbacks.onMemoryUpdate?.();
         }
       }

@@ -51,6 +51,7 @@ export const LandingPage: React.FC = () => {
     handleInterrupt,
     testGreeting,
     sendProactiveSettingsUpdate,
+    sendContextSettingsUpdate,
   } = useRevaVoice({
     onMemoryUpdated: () => {
       refreshMemories();
@@ -264,6 +265,7 @@ export const LandingPage: React.FC = () => {
         proactiveSettings={diagnostics.proactive?.settings}
         systemStatus={systemStatus}
         onUpdateProactiveSettings={sendProactiveSettingsUpdate}
+        onUpdateContextSettings={sendContextSettingsUpdate}
         onTestGreeting={testGreeting}
       />
 

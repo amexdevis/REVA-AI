@@ -14,6 +14,12 @@ interface RevaSettingsModalProps {
   proactiveSettings?: ProactiveSettings;
   systemStatus?: SystemStatusData | null;
   onUpdateProactiveSettings?: (settings: Partial<ProactiveSettings>) => void;
+  onUpdateContextSettings?: (settings: Partial<{
+    contextAwarenessEnabled: boolean;
+    timeAwarenessEnabled: boolean;
+    applicationContextEnabled: boolean;
+    autoTopicTracking: boolean;
+  }>) => void;
   onTestGreeting?: () => void;
 }
 
@@ -24,6 +30,7 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
   proactiveSettings,
   systemStatus,
   onUpdateProactiveSettings,
+  onUpdateContextSettings,
   onTestGreeting,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'general' | 'proactive' | 'system' | 'dev'>('general');
@@ -95,6 +102,28 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
         <div className="p-6 max-h-[65vh] overflow-y-auto space-y-4 text-xs font-mono">
           {activeSubTab === 'general' && (
             <div className="space-y-4">
+              <div className="p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-300 font-medium">Voice & Persona</span>
+                  <span className="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 text-[10px]">
+                    Aoede (Female)
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                  <div>
+                    <span className="text-zinc-500 block">Identity</span>
+                    <span className="text-zinc-200">Female AI Companion</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block">Pronouns</span>
+                    <span className="text-zinc-200">She / Her</span>
+                  </div>
+                </div>
+                <p className="text-zinc-400 text-[11px] pt-1">
+                  Tone: Warm, mature, intelligent, and natural conversational cadence.
+                </p>
+              </div>
+
               <div className="p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-300 font-medium">Gemini Live Realtime Voice</span>
@@ -170,8 +199,39 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
 
           {activeSubTab === 'system' && (
             <div className="space-y-3">
+              {/* Context Awareness Master Toggle */}
+              <div className="flex items-center justify-between p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl">
+                <div>
+                  <span className="text-zinc-200 font-medium">Smart Context Awareness Engine</span>
+                  <p className="text-zinc-400 text-[11px]">Continuously tracks conversation topics, active tasks, and environment</p>
+                </div>
+                <input
+                  id="toggle-context-awareness"
+                  type="checkbox"
+                  checked={diagnostics.context?.awarenessStatus !== 'OFF'}
+                  onChange={(e) => onUpdateContextSettings?.({ contextAwarenessEnabled: e.target.checked })}
+                  className="accent-purple-500 w-4 h-4 cursor-pointer"
+                />
+              </div>
+
+              {/* Time Awareness Toggle */}
+              <div className="flex items-center justify-between p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl">
+                <div>
+                  <span className="text-zinc-200 font-medium">Time & Day Awareness</span>
+                  <p className="text-zinc-400 text-[11px]">Adapts greetings and advice to morning, afternoon, night, and weekend routines</p>
+                </div>
+                <input
+                  id="toggle-time-awareness"
+                  type="checkbox"
+                  defaultChecked={true}
+                  onChange={(e) => onUpdateContextSettings?.({ timeAwarenessEnabled: e.target.checked })}
+                  className="accent-purple-500 w-4 h-4 cursor-pointer"
+                />
+              </div>
+
+              {/* System Awareness Status Card */}
               <div className="p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl space-y-2">
-                <span className="text-zinc-200 font-medium">System Awareness Status</span>
+                <span className="text-zinc-200 font-medium">System Telemetry</span>
                 <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] text-zinc-400">
                   <div>Platform: {systemStatus?.platform || 'Linux'}</div>
                   <div>Cores: {systemStatus?.cpuCount || '4'}</div>
@@ -193,7 +253,53 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
           )}
 
           {activeSubTab === 'dev' && (
-            <div className="space-y-2 text-zinc-400">
+            <div className="space-y-2 text-zinc-400 text-[11px]">
+              {/* Context Awareness Diagnostics */}
+              <div className="p-3 bg-purple-950/40 rounded-xl border border-purple-800/60 space-y-1.5">
+                <div className="flex justify-between font-semibold text-purple-300 pb-1 border-b border-purple-900/60">
+                  <span>Context Awareness Engine:</span>
+                  <span className={diagnostics.context?.awarenessStatus === 'ON' ? 'text-emerald-400' : 'text-amber-400'}>
+                    {diagnostics.context?.awarenessStatus || 'ON'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Active Topic:</span>
+                  <span className="text-zinc-200 font-medium truncate max-w-[240px]" title={diagnostics.context?.currentTopic}>
+                    {diagnostics.context?.currentTopic || 'General conversation'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Active Task:</span>
+                  <span className="text-zinc-200 font-medium truncate max-w-[240px]" title={diagnostics.context?.currentTask}>
+                    {diagnostics.context?.currentTask || 'None'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Active Application:</span>
+                  <span className="text-zinc-200 font-medium truncate max-w-[240px]">
+                    {diagnostics.context?.activeApp || 'REVA Companion UI'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">User State:</span>
+                  <span className="text-cyan-300 font-medium">
+                    {diagnostics.context?.userState || 'ACTIVE_ENGAGEMENT'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Memory Count:</span>
+                  <span className="text-emerald-400 font-medium">
+                    {diagnostics.memoryCount ?? diagnostics.context?.memoryCount ?? 0} facts stored
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Last Event:</span>
+                  <span className="text-purple-300 font-medium truncate max-w-[240px]">
+                    {diagnostics.context?.lastEvent || diagnostics.lastEvent}
+                  </span>
+                </div>
+              </div>
+
               <div className="p-2 bg-black/40 rounded border border-purple-950 flex justify-between">
                 <span>Voice State:</span>
                 <span className="text-purple-300">{diagnostics.revaVoiceState}</span>

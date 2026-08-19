@@ -59,6 +59,7 @@ export interface SystemStatusInfo {
   platform: string;
   osType: string;
   osRelease: string;
+  distro?: string;
   arch: string;
   hostname: string;
   uptimeSeconds: number;
@@ -67,6 +68,7 @@ export interface SystemStatusInfo {
     model: string;
     cores: number;
     speedMhz: number;
+    usagePercent: number;
     loadAverages: number[];
   };
   memory: {
@@ -78,9 +80,30 @@ export interface SystemStatusInfo {
     usedFormatted: string;
     freeFormatted: string;
   };
+  disk: {
+    totalBytes: number;
+    usedBytes: number;
+    freeBytes: number;
+    usedPercent: number;
+    totalFormatted: string;
+    usedFormatted: string;
+    freeFormatted: string;
+  };
+  battery?: {
+    supported: boolean;
+    isCharging?: boolean;
+    percent?: number;
+    statusText: string;
+  };
+  network?: {
+    connected: boolean;
+    interfaces: Array<{ name: string; address: string; family: string }>;
+    summary: string;
+  };
   nodeVersion: string;
   processUptime: number;
   timestamp: string;
+  spokenSummary: string;
 }
 
 export interface ActiveApplicationInfo {
@@ -106,6 +129,15 @@ export interface FileSearchResult {
 export interface RunningApplicationInfo {
   pid: number;
   name: string;
+  command?: string;
   cpuPercent?: number;
   memoryPercent?: number;
+}
+
+export interface WindowControlResult {
+  action: 'focus' | 'minimize' | 'maximize' | 'restore' | 'close';
+  windowNameOrId?: string;
+  success: boolean;
+  supported: boolean;
+  message: string;
 }

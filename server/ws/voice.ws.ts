@@ -8,11 +8,15 @@ import { IncomingMessage } from 'http';
 import { GeminiLiveService } from '../services/gemini-live.service.js';
 import { ProactiveBehaviorService } from '../services/proactive-behavior.service.js';
 import { ToolExecutionService } from '../services/tool-execution.service.js';
+import { ContextAwarenessService } from '../services/context-awareness.service.js';
+import { TimeService } from '../services/time.service.js';
 import { ClientVoiceMessage, ServerVoiceMessage } from '../types/voice.types.js';
 
 export function setupVoiceWebSocket(wss: WebSocketServer) {
   const proactiveService = ProactiveBehaviorService.getInstance();
   const toolService = ToolExecutionService.getInstance();
+  const contextService = ContextAwarenessService.getInstance();
+  const timeService = TimeService.getInstance();
 
   wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     console.log('[REVA][WS] Client connected to Voice WebSocket endpoint');
@@ -101,6 +105,10 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
             role,
             text,
           });
+          sendMessage({
+            type: 'CONTEXT_UPDATE',
+            context: contextService.getDiagnostics(),
+          });
         },
         onEmotionUpdate: (personality) => {
           sendMessage({
@@ -170,6 +178,12 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
     // Auto-connect Gemini Live on WebSocket client connection
     initializeGeminiLive();
 
+    // Send initial context diagnostics
+    sendMessage({
+      type: 'CONTEXT_UPDATE',
+      context: contextService.getDiagnostics(),
+    });
+
     ws.on('message', async (data: Buffer | string) => {
       try {
         const payload: ClientVoiceMessage = JSON.parse(data.toString());
@@ -233,6 +247,26 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
               sendMessage({
                 type: 'PROACTIVE_UPDATE',
                 proactive: proactiveService.getDiagnostics(),
+              });
+            }
+            break;
+
+          case 'UPDATE_CONTEXT_SETTINGS':
+            if (payload.contextSettings) {
+              contextService.updateSettings(payload.contextSettings);
+              sendMessage({
+                type: 'CONTEXT_UPDATE',
+                context: contextService.getDiagnostics(),
+              });
+            }
+            break;
+
+          case 'CLIENT_TIMEZONE':
+            if (payload.timezone) {
+              timeService.setUserTimezone(payload.timezone, typeof payload.offsetMinutes === 'number' ? payload.offsetMinutes : undefined);
+              sendMessage({
+                type: 'CONTEXT_UPDATE',
+                context: contextService.getDiagnostics(),
               });
             }
             break;

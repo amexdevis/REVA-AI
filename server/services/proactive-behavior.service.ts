@@ -14,6 +14,8 @@ import {
 } from '../types/voice.types.js';
 import { MemoryService } from './memory.service.js';
 import { GeminiService } from './gemini.service.js';
+import { ContextAwarenessService } from './context-awareness.service.js';
+import { TimeService } from './time.service.js';
 
 export class ProactiveBehaviorService {
   private static instance: ProactiveBehaviorService | null = null;
@@ -195,9 +197,17 @@ export class ProactiveBehaviorService {
     };
     this.pushEvent(eventRecord);
 
+    // Register event in ContextAwarenessService for unified state tracking
+    ContextAwarenessService.getInstance().recordContextEvent(eventType, `Proactive event received: ${eventType}`, context);
+
     // 3. Check Master Proactive Mode
     if (!this.settings.proactiveMode) {
       return this.silentDecision('Proactive Mode is disabled in settings', importance, eventRecord);
+    }
+
+    // 3.1 Check Context Awareness Global Privacy Toggle
+    if (!ContextAwarenessService.getInstance().isContextAwarenessEnabled()) {
+      return this.silentDecision('Context Awareness is disabled (Privacy Mode)', importance, eventRecord);
     }
 
     // 4. Check Quiet Mode
@@ -349,9 +359,10 @@ export class ProactiveBehaviorService {
     const relevantMemories = await this.memoryService.getRelevantMemories(`${type} ${currentApp}`, 2);
     const memoryContext = relevantMemories.map((m) => m.content).join('; ');
 
-    // Fallback template library for ultra-fast, natural phrasing
-    const localHour = new Date().getHours();
-    const timeOfDay = localHour < 12 ? 'morning' : localHour < 17 ? 'afternoon' : localHour < 22 ? 'evening' : 'night';
+    // Dynamic period of day derived strictly from user's detected timezone
+    const timeService = TimeService.getInstance();
+    const period = timeService.getPeriodOfDay();
+    const timeOfDay = period === 'MORNING' ? 'morning' : period === 'AFTERNOON' ? 'afternoon' : period === 'EVENING' ? 'evening' : 'night';
 
     switch (type) {
       case 'USER_RETURNED':

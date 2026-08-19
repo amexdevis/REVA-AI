@@ -181,6 +181,21 @@ export function useRevaVoice(options?: {
         reconnectAttempts: 0,
         lastEvent: 'WS_OPENED',
       });
+
+      // Synchronize client browser timezone immediately upon connection
+      try {
+        const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const offsetMins = new Date().getTimezoneOffset();
+        ws.send(
+          JSON.stringify({
+            type: 'CLIENT_TIMEZONE',
+            timezone: detectedTz,
+            offsetMinutes: offsetMins,
+          })
+        );
+      } catch (tzErr) {
+        console.warn('[REVA] Could not send client timezone:', tzErr);
+      }
     };
 
     ws.onmessage = async (event) => {
@@ -271,6 +286,15 @@ export function useRevaVoice(options?: {
             if (msg.text) {
               addTranscript('reva', msg.text);
               updateDiagnostics({ lastEvent: 'PROACTIVE_SPEECH_TRIGGERED' });
+            }
+            break;
+
+          case 'CONTEXT_UPDATE':
+            if (msg.context) {
+              updateDiagnostics({
+                context: msg.context,
+                lastEvent: 'CONTEXT_DIAGNOSTICS_UPDATED',
+              });
             }
             break;
 
@@ -504,6 +528,36 @@ export function useRevaVoice(options?: {
     }
   }, []);
 
+  // Send context awareness settings update over WebSocket
+  const sendContextSettingsUpdate = useCallback((contextSettings: Partial<{
+    contextAwarenessEnabled: boolean;
+    timeAwarenessEnabled: boolean;
+    applicationContextEnabled: boolean;
+    autoTopicTracking: boolean;
+  }>) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'UPDATE_CONTEXT_SETTINGS',
+          contextSettings,
+        })
+      );
+    }
+    // Also update via REST API for persistence
+    fetch('/api/context/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contextSettings),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.diagnostics) {
+          updateDiagnostics({ context: data.diagnostics });
+        }
+      })
+      .catch(() => {});
+  }, [updateDiagnostics]);
+
   // Disconnect voice session cleanly
   const disconnectVoice = useCallback(() => {
     isManuallyDisconnectedRef.current = true;
@@ -548,9 +602,20 @@ export function useRevaVoice(options?: {
     await startMicrophone();
   }, [connectWebSocket, startMicrophone]);
 
-  // Component lifecycle cleanup
+  // Component lifecycle cleanup & initial browser timezone sync
   useEffect(() => {
     isComponentMountedRef.current = true;
+
+    // Send initial HTTP timezone sync to ensure server knows browser timezone immediately
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const offset = new Date().getTimezoneOffset();
+      fetch('/api/time/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timezone: tz, offsetMinutes: offset }),
+      }).catch((e) => console.warn('[REVA] Initial timezone sync warning:', e));
+    } catch (_) {}
 
     return () => {
       isComponentMountedRef.current = false;
@@ -613,6 +678,7 @@ export function useRevaVoice(options?: {
     testGreeting,
     sendProactiveEvent,
     sendProactiveSettingsUpdate,
+    sendContextSettingsUpdate,
     executeToolViaWs,
     sendClipboardPaste,
   };

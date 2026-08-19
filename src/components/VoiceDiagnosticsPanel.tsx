@@ -280,6 +280,49 @@ export const VoiceDiagnosticsPanel: React.FC<VoiceDiagnosticsPanelProps> = ({
         </div>
       </div>
 
+      {/* Smart Context Awareness Diagnostics (Step 6) */}
+      <div id="diag-smart-context" className="mb-4 p-3 rounded-lg bg-zinc-950/80 border border-zinc-800 font-mono text-xs space-y-2">
+        <div className="flex items-center justify-between pb-1.5 border-b border-zinc-800/70">
+          <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[11px]">
+            Context Awareness Engine
+          </span>
+          <span className={`text-[10px] px-2 py-0.5 rounded border ${
+            diagnostics.context?.awarenessStatus === 'ON' || !diagnostics.context
+              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+              : 'bg-amber-950/80 text-amber-300 border-amber-800'
+          }`}>
+            {diagnostics.context?.awarenessStatus || 'ON'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="p-2 rounded bg-zinc-900/60 border border-zinc-800/60">
+            <span className="text-[10px] text-zinc-500 block uppercase">Current Topic</span>
+            <span className="font-medium text-purple-300 truncate block" title={diagnostics.context?.currentTopic || 'General conversation'}>
+              {diagnostics.context?.currentTopic || 'General conversation'}
+            </span>
+          </div>
+          <div className="p-2 rounded bg-zinc-900/60 border border-zinc-800/60">
+            <span className="text-[10px] text-zinc-500 block uppercase">Current Task</span>
+            <span className="font-medium text-cyan-300 truncate block" title={diagnostics.context?.currentTask || 'None'}>
+              {diagnostics.context?.currentTask || 'None'}
+            </span>
+          </div>
+          <div className="p-2 rounded bg-zinc-900/60 border border-zinc-800/60">
+            <span className="text-[10px] text-zinc-500 block uppercase">Active App</span>
+            <span className="font-medium text-zinc-300 truncate block">
+              {diagnostics.context?.activeApp || 'REVA Companion UI'}
+            </span>
+          </div>
+          <div className="p-2 rounded bg-zinc-900/60 border border-zinc-800/60">
+            <span className="text-[10px] text-zinc-500 block uppercase">User State</span>
+            <span className="font-medium text-emerald-300 truncate block">
+              {diagnostics.context?.userState || 'ACTIVE_ENGAGEMENT'}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Meta events info */}
       <div className="space-y-1.5 p-3 rounded bg-zinc-950/90 border border-zinc-800/90 font-mono text-[11px]">
         <div className="flex justify-between text-zinc-400">

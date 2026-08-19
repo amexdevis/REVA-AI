@@ -243,6 +243,7 @@ export interface VoiceDiagnostics {
   memoryCount?: number;
   memoryRetrieval?: MemoryRetrievalDiagnostics;
   proactive?: ProactiveDiagnosticsData;
+  context?: ContextDiagnostics;
 }
 
 export type ToolPermissionLevel = 'READ_ONLY' | 'REVERSIBLE' | 'SENSITIVE' | 'DESTRUCTIVE';
@@ -312,6 +313,7 @@ export interface ServerVoiceMessage {
     | 'MEMORY_UPDATE'
     | 'PROACTIVE_UPDATE'
     | 'PROACTIVE_SPEECH'
+    | 'CONTEXT_UPDATE'
     | 'TOOL_EXECUTED'
     | 'TIMER_RING'
     | 'CLIPBOARD_SYNC'
@@ -323,6 +325,7 @@ export interface ServerVoiceMessage {
   text?: string;
   personality?: PersonalityDiagnosticsData;
   proactive?: ProactiveDiagnosticsData;
+  context?: ContextDiagnostics;
   toolResult?: ToolExecutionResult;
   timer?: TimerItem;
   url?: string;
@@ -342,6 +345,7 @@ export interface ClientVoiceMessage {
     | 'TEST_GREETING'
     | 'PROACTIVE_EVENT'
     | 'UPDATE_PROACTIVE_SETTINGS'
+    | 'UPDATE_CONTEXT_SETTINGS'
     | 'EXECUTE_TOOL'
     | 'CLIPBOARD_PASTE';
   audio?: string;
@@ -351,7 +355,40 @@ export interface ClientVoiceMessage {
     context?: Record<string, any>;
   };
   settings?: Partial<ProactiveSettings>;
+  contextSettings?: Partial<{
+    contextAwarenessEnabled: boolean;
+    timeAwarenessEnabled: boolean;
+    applicationContextEnabled: boolean;
+    autoTopicTracking: boolean;
+  }>;
   toolName?: string;
   toolArgs?: Record<string, any>;
   clipboardText?: string;
 }
+
+export type UserConversationalState =
+  | 'CALM'
+  | 'BUSY'
+  | 'FOCUSED'
+  | 'EXCITED'
+  | 'FRUSTRATED'
+  | 'CONFUSED'
+  | 'TIRED'
+  | 'CURIOUS'
+  | 'NEUTRAL';
+
+export type DayPeriod = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'NIGHT';
+
+export interface ContextDiagnostics {
+  currentTopic: string;
+  currentTask: string;
+  activeApplication: string | null;
+  userState: UserConversationalState;
+  relevantMemoryCount: number;
+  lastContextEvent: string | null;
+  contextAwarenessEnabled: boolean;
+  timeOfDay: string;
+  periodOfDay: DayPeriod;
+  lastUpdated: string;
+}
+

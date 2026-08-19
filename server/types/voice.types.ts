@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { ContextSettings, ContextDiagnostics } from './context.types.js';
+export * from './context.types.js';
+
 export type VoiceSessionState =
   | 'OFFLINE'
   | 'CONNECTING'
@@ -213,6 +216,7 @@ export interface ProactiveDiagnosticsData {
 }
 
 export * from './tools.types.js';
+export * from './context.types.js';
 
 export interface ClientVoiceMessage {
   type:
@@ -224,6 +228,8 @@ export interface ClientVoiceMessage {
     | 'TEST_GREETING'
     | 'PROACTIVE_EVENT'
     | 'UPDATE_PROACTIVE_SETTINGS'
+    | 'UPDATE_CONTEXT_SETTINGS'
+    | 'CLIENT_TIMEZONE'
     | 'CLIPBOARD_PASTE'
     | 'EXECUTE_TOOL'
     | 'DISCONNECT';
@@ -232,8 +238,11 @@ export interface ClientVoiceMessage {
   toolName?: string;
   toolArgs?: Record<string, any>;
   clipboardText?: string;
+  timezone?: string;
+  offsetMinutes?: number;
   event?: Partial<ProactiveEvent>;
   settings?: Partial<ProactiveSettings>;
+  contextSettings?: Partial<ContextSettings>;
 }
 
 export interface ServerVoiceMessage {
@@ -247,6 +256,7 @@ export interface ServerVoiceMessage {
     | 'MEMORY_UPDATE'
     | 'PROACTIVE_UPDATE'
     | 'PROACTIVE_SPEECH'
+    | 'CONTEXT_UPDATE'
     | 'TOOL_EXECUTED'
     | 'TIMER_RING'
     | 'CLIPBOARD_SYNC'
@@ -268,5 +278,6 @@ export interface ServerVoiceMessage {
   memories?: MemoryRecord[];
   memoryRetrieval?: MemoryRetrievalDiagnostics;
   proactive?: ProactiveDiagnosticsData;
+  context?: ContextDiagnostics;
   details?: Record<string, unknown>;
 }

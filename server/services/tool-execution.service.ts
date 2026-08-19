@@ -9,6 +9,8 @@ import path from 'path';
 import { spawn, execFile } from 'child_process';
 import { MemoryService } from './memory.service.js';
 import { ProactiveBehaviorService } from './proactive-behavior.service.js';
+import { TimeService } from './time.service.js';
+import { SystemControlService } from './system-control.service.js';
 import {
   ToolPermissionLevel,
   ToolDefinition,
@@ -20,6 +22,7 @@ import {
   ActiveApplicationInfo,
   FileSearchResult,
   RunningApplicationInfo,
+  WindowControlResult,
 } from '../types/tools.types.js';
 
 export interface ActiveTimerInstance {
@@ -282,6 +285,108 @@ export class ToolExecutionService {
         },
       },
       {
+        name: 'close_application',
+        description: 'Close or terminate an active running application safely (e.g. Chrome, Spotify, Firefox).',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            appName: {
+              type: 'STRING',
+              description: 'Name of application to close (e.g. "chrome", "spotify", "vscode")',
+            },
+          },
+          required: ['appName'],
+        },
+      },
+      {
+        name: 'focus_application',
+        description: 'Bring an open application window to the foreground and focus it (e.g. "focus Chrome", "switch to VS Code").',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            appName: {
+              type: 'STRING',
+              description: 'Name of application to focus (e.g. "chrome", "vscode", "terminal")',
+            },
+          },
+          required: ['appName'],
+        },
+      },
+      {
+        name: 'focus_window',
+        description: 'Focus a specific active window by title or application name.',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            windowName: {
+              type: 'STRING',
+              description: 'Window title or application name to focus',
+            },
+          },
+          required: ['windowName'],
+        },
+      },
+      {
+        name: 'minimize_window',
+        description: 'Minimize the currently active window or a specified window.',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            windowName: {
+              type: 'STRING',
+              description: 'Optional window title or application name to minimize',
+            },
+          },
+        },
+      },
+      {
+        name: 'maximize_window',
+        description: 'Maximize the currently active window or a specified window.',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            windowName: {
+              type: 'STRING',
+              description: 'Optional window title or application name to maximize',
+            },
+          },
+        },
+      },
+      {
+        name: 'restore_window',
+        description: 'Restore the currently active window or a specified window to normal size.',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            windowName: {
+              type: 'STRING',
+              description: 'Optional window title or application name to restore',
+            },
+          },
+        },
+      },
+      {
+        name: 'close_window',
+        description: 'Close a specific active window by title.',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            windowName: {
+              type: 'STRING',
+              description: 'Window title or application name to close',
+            },
+          },
+          required: ['windowName'],
+        },
+      },
+      {
         name: 'read_clipboard',
         description: 'Read current text content from the user clipboard buffer.',
         permission: 'SENSITIVE',
@@ -516,6 +621,34 @@ export class ToolExecutionService {
           executionResult = await this.executeOpenApplication(cleanArgs, startTime);
           break;
 
+        case 'close_application':
+          executionResult = await this.executeCloseApplication(cleanArgs, startTime);
+          break;
+
+        case 'focus_application':
+          executionResult = await this.executeFocusApplication(cleanArgs, startTime);
+          break;
+
+        case 'focus_window':
+          executionResult = await this.executeFocusWindow(cleanArgs, startTime);
+          break;
+
+        case 'minimize_window':
+          executionResult = await this.executeMinimizeWindow(cleanArgs, startTime);
+          break;
+
+        case 'maximize_window':
+          executionResult = await this.executeMaximizeWindow(cleanArgs, startTime);
+          break;
+
+        case 'restore_window':
+          executionResult = await this.executeRestoreWindow(cleanArgs, startTime);
+          break;
+
+        case 'close_window':
+          executionResult = await this.executeCloseWindow(cleanArgs, startTime);
+          break;
+
         case 'read_clipboard':
           executionResult = await this.executeReadClipboard(startTime);
           break;
@@ -595,65 +728,13 @@ export class ToolExecutionService {
    * 1. get_system_status
    */
   private async executeGetSystemStatus(startTime: number): Promise<ToolExecutionResult> {
-    const cpus = os.cpus();
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const usedMem = totalMem - freeMem;
-    const usedPercent = Math.round((usedMem / totalMem) * 100);
-    const loadAvg = os.loadavg();
-    const uptimeSec = Math.floor(os.uptime());
-
-    const formatBytes = (bytes: number): string => {
-      const gb = bytes / (1024 * 1024 * 1024);
-      return `${gb.toFixed(2)} GB`;
-    };
-
-    const formatUptime = (seconds: number): string => {
-      const days = Math.floor(seconds / (3600 * 24));
-      const hours = Math.floor((seconds % (3600 * 24)) / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-      if (hours > 0) return `${hours}h ${minutes}m`;
-      return `${minutes} minutes`;
-    };
-
-    const statusInfo: SystemStatusInfo = {
-      platform: os.platform(),
-      osType: os.type(),
-      osRelease: os.release(),
-      arch: os.arch(),
-      hostname: os.hostname(),
-      uptimeSeconds: uptimeSec,
-      formattedUptime: formatUptime(uptimeSec),
-      cpu: {
-        model: cpus.length > 0 ? cpus[0].model.trim() : 'Generic CPU',
-        cores: cpus.length,
-        speedMhz: cpus.length > 0 ? cpus[0].speed : 0,
-        loadAverages: loadAvg.map((n) => Number(n.toFixed(2))),
-      },
-      memory: {
-        totalBytes: totalMem,
-        freeBytes: freeMem,
-        usedBytes: usedMem,
-        usedPercent,
-        totalFormatted: formatBytes(totalMem),
-        usedFormatted: formatBytes(usedMem),
-        freeFormatted: formatBytes(freeMem),
-      },
-      nodeVersion: process.version,
-      processUptime: Math.floor(process.uptime()),
-      timestamp: new Date().toISOString(),
-    };
-
-    const spokenSummary = `System is running ${statusInfo.osType} on ${statusInfo.arch} architecture with ${statusInfo.cpu.cores} CPU cores. Memory usage is ${statusInfo.memory.usedFormatted} out of ${statusInfo.memory.totalFormatted} (${usedPercent}% in use), and load average is ${loadAvg[0]?.toFixed(2) || '0.1'}.`;
+    const sysControl = SystemControlService.getInstance();
+    const statusInfo = await sysControl.getSystemStatus();
 
     return {
       success: true,
       tool: 'get_system_status',
-      result: {
-        ...statusInfo,
-        spokenSummary,
-      },
+      result: statusInfo,
       executionTimeMs: Date.now() - startTime,
       timestamp: new Date().toISOString(),
       permissionLevel: 'READ_ONLY',
@@ -693,37 +774,13 @@ export class ToolExecutionService {
    * 3. get_current_time
    */
   private async executeGetCurrentTime(startTime: number): Promise<ToolExecutionResult> {
-    const now = new Date();
-    const timeOptions: Intl.DateTimeFormatOptions = {
-      hour: 'numeric',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true,
-    };
-    const dateOptions: Intl.DateTimeFormatOptions = {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    };
-
-    const formattedTime = now.toLocaleTimeString('en-US', timeOptions);
-    const formattedDate = now.toLocaleDateString('en-US', dateOptions);
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-
-    const spokenSummary = `It is currently ${formattedTime} on ${formattedDate} (${timeZone}).`;
+    const timeService = TimeService.getInstance();
+    const timeData = timeService.getCurrentTimeToolResult();
 
     return {
       success: true,
       tool: 'get_current_time',
-      result: {
-        iso: now.toISOString(),
-        formattedTime,
-        formattedDate,
-        dayOfWeek: now.toLocaleDateString('en-US', { weekday: 'long' }),
-        timeZone,
-        spokenSummary,
-      },
+      result: timeData,
       executionTimeMs: Date.now() - startTime,
       timestamp: new Date().toISOString(),
       permissionLevel: 'READ_ONLY',
@@ -734,89 +791,39 @@ export class ToolExecutionService {
    * 4. open_website
    */
   private async executeOpenWebsite(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
-    let rawUrl = (args.url || '').trim();
-    if (!rawUrl) {
+    const rawUrl = (args.url || args.website || args.query || '').trim();
+    const sysControl = SystemControlService.getInstance();
+    const webResult = await sysControl.openWebsite(rawUrl);
+
+    if (!webResult.success) {
       return {
         success: false,
         tool: 'open_website',
-        error: 'Please provide a website URL or address.',
+        error: webResult.error || 'Failed to open website.',
         executionTimeMs: Date.now() - startTime,
         timestamp: new Date().toISOString(),
         permissionLevel: 'REVERSIBLE',
       };
     }
 
-    // Auto-complete common short domains
-    if (!/^https?:\/\//i.test(rawUrl)) {
-      if (/^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/i.test(rawUrl)) {
-        rawUrl = `https://${rawUrl}`;
-      } else if (rawUrl.toLowerCase().includes('youtube')) {
-        rawUrl = 'https://youtube.com';
-      } else if (rawUrl.toLowerCase().includes('github')) {
-        rawUrl = 'https://github.com';
-      } else if (rawUrl.toLowerCase().includes('google')) {
-        rawUrl = 'https://google.com';
-      } else {
-        rawUrl = `https://www.google.com/search?q=${encodeURIComponent(rawUrl)}`;
-      }
-    }
-
-    // URL validation: Strictly HTTP or HTTPS
-    try {
-      const parsed = new URL(rawUrl);
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        return {
-          success: false,
-          tool: 'open_website',
-          error: `URL protocol "${parsed.protocol}" is not allowed. Only HTTP and HTTPS URLs are permitted.`,
-          executionTimeMs: Date.now() - startTime,
-          timestamp: new Date().toISOString(),
-          permissionLevel: 'REVERSIBLE',
-        };
-      }
-    } catch {
-      return {
-        success: false,
-        tool: 'open_website',
-        error: `Malformed URL "${rawUrl}". Please provide a valid web address.`,
-        executionTimeMs: Date.now() - startTime,
-        timestamp: new Date().toISOString(),
-        permissionLevel: 'REVERSIBLE',
-      };
-    }
-
-    // Broadcast URL to connected client frontend so the browser tab can launch
-    this.onUrlOpenCallbacks.forEach((cb) => {
-      try {
-        cb(rawUrl);
-      } catch (err) {
-        console.warn('[REVA][TOOLS] Error in onUrlOpen callback:', err);
-      }
-    });
-
-    // Attempt system launch (xdg-open or open if in native desktop)
-    const platform = os.platform();
-    if (platform === 'linux' || platform === 'darwin' || platform === 'win32') {
-      const opener = platform === 'darwin' ? 'open' : platform === 'win32' ? 'start' : 'xdg-open';
-      try {
-        execFile(opener, [rawUrl], (err) => {
-          if (err) {
-            // Non-fatal in cloud/headless container since client browser tab handles it
-            console.log(`[REVA][TOOLS] System opener note: ${err.message}`);
-          }
-        });
-      } catch {
-        // Ignored in container
-      }
+    // Broadcast URL to connected client frontend so the browser tab opens
+    if (webResult.url) {
+      this.onUrlOpenCallbacks.forEach((cb) => {
+        try {
+          cb(webResult.url!);
+        } catch (err) {
+          console.warn('[REVA][TOOLS] Error in onUrlOpen callback:', err);
+        }
+      });
     }
 
     return {
       success: true,
       tool: 'open_website',
       result: {
-        url: rawUrl,
+        url: webResult.url,
         opened: true,
-        spokenSummary: `Opening ${rawUrl}.`,
+        spokenSummary: webResult.spokenSummary,
       },
       executionTimeMs: Date.now() - startTime,
       timestamp: new Date().toISOString(),
@@ -828,96 +835,193 @@ export class ToolExecutionService {
    * 5. open_application
    */
   private async executeOpenApplication(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
-    const rawApp = (args.appName || args.name || args.application || '').toLowerCase().trim();
-    if (!rawApp) {
+    const rawApp = (args.appName || args.name || args.application || args.app || '').trim();
+    const sysControl = SystemControlService.getInstance();
+    const appResult = await sysControl.openApplication(rawApp);
+
+    if (!appResult.success) {
       return {
         success: false,
         tool: 'open_application',
-        error: 'Please specify an application name to open (e.g. Chrome, VS Code, Terminal, Calculator).',
+        error: appResult.error || 'Failed to open application.',
         executionTimeMs: Date.now() - startTime,
         timestamp: new Date().toISOString(),
         permissionLevel: 'REVERSIBLE',
       };
     }
 
-    // Check whitelist
-    const appEntry = ToolExecutionService.ALLOWED_APPS_MAP[rawApp];
-    if (!appEntry) {
-      const supported = Object.keys(ToolExecutionService.ALLOWED_APPS_MAP).join(', ');
+    return {
+      success: true,
+      tool: 'open_application',
+      result: {
+        application: appResult.application,
+        binary: appResult.binary,
+        spokenSummary: appResult.spokenSummary,
+      },
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'REVERSIBLE',
+    };
+  }
+
+  /**
+   * 5b. close_application
+   */
+  private async executeCloseApplication(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const rawApp = (args.appName || args.name || args.application || args.app || '').trim();
+    const sysControl = SystemControlService.getInstance();
+    const closeResult = await sysControl.closeApplication(rawApp);
+
+    if (!closeResult.success) {
       return {
         success: false,
-        tool: 'open_application',
-        error: `Application "${rawApp}" is not in the recognized safe application list. Supported: ${supported}.`,
+        tool: 'close_application',
+        error: closeResult.error || `I couldn't find a running instance of that application.`,
         executionTimeMs: Date.now() - startTime,
         timestamp: new Date().toISOString(),
         permissionLevel: 'REVERSIBLE',
       };
     }
 
-    // Check if any binary exists on the system path
-    let foundBinary: string | null = null;
-    for (const bin of appEntry.binaries) {
-      try {
-        const checkResult = await new Promise<boolean>((resolve) => {
-          execFile('which', [bin], (err, stdout) => {
-            if (!err && stdout.trim().length > 0) {
-              resolve(true);
-            } else {
-              resolve(false);
-            }
-          });
-        });
-        if (checkResult) {
-          foundBinary = bin;
-          break;
-        }
-      } catch {
-        // check next
-      }
-    }
+    return {
+      success: true,
+      tool: 'close_application',
+      result: {
+        application: closeResult.application,
+        closed: true,
+        spokenSummary: closeResult.spokenSummary,
+      },
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'REVERSIBLE',
+    };
+  }
 
-    if (!foundBinary) {
-      // Honest failure reporting: never fake application launch!
-      return {
-        success: false,
-        tool: 'open_application',
-        error: `I couldn't open ${appEntry.displayName} because it is not installed or available on this host environment.`,
-        executionTimeMs: Date.now() - startTime,
-        timestamp: new Date().toISOString(),
-        permissionLevel: 'REVERSIBLE',
-      };
-    }
+  /**
+   * 5c. focus_application
+   */
+  private async executeFocusApplication(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const rawApp = (args.appName || args.name || args.application || args.app || '').trim();
+    const sysControl = SystemControlService.getInstance();
+    const focusResult = await sysControl.focusApplication(rawApp);
 
-    // Launch safely using spawn detached
-    try {
-      const child = spawn(foundBinary, [], {
-        detached: true,
-        stdio: 'ignore',
-      });
-      child.unref();
+    return {
+      success: true,
+      tool: 'focus_application',
+      result: {
+        application: focusResult.application,
+        supported: focusResult.supported,
+        spokenSummary: focusResult.spokenSummary,
+      },
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'READ_ONLY',
+    };
+  }
 
-      return {
-        success: true,
-        tool: 'open_application',
-        result: {
-          application: appEntry.displayName,
-          binary: foundBinary,
-          spokenSummary: `${appEntry.displayName} is open.`,
-        },
-        executionTimeMs: Date.now() - startTime,
-        timestamp: new Date().toISOString(),
-        permissionLevel: 'REVERSIBLE',
-      };
-    } catch (launchErr: any) {
-      return {
-        success: false,
-        tool: 'open_application',
-        error: `Failed to launch ${appEntry.displayName}: ${launchErr?.message || 'Permission denied'}`,
-        executionTimeMs: Date.now() - startTime,
-        timestamp: new Date().toISOString(),
-        permissionLevel: 'REVERSIBLE',
-      };
-    }
+  /**
+   * 5d. focus_window
+   */
+  private async executeFocusWindow(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const win = (args.windowName || args.name || args.window || '').trim();
+    const sysControl = SystemControlService.getInstance();
+    const res = await sysControl.controlWindow('focus', win);
+
+    return {
+      success: true,
+      tool: 'focus_window',
+      result: {
+        ...res,
+        spokenSummary: `Focused window ${win || ''}.`,
+      },
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'READ_ONLY',
+    };
+  }
+
+  /**
+   * 5e. minimize_window
+   */
+  private async executeMinimizeWindow(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const win = (args.windowName || args.name || args.window || '').trim();
+    const sysControl = SystemControlService.getInstance();
+    const res = await sysControl.controlWindow('minimize', win);
+
+    return {
+      success: true,
+      tool: 'minimize_window',
+      result: {
+        ...res,
+        spokenSummary: res.message,
+      },
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'READ_ONLY',
+    };
+  }
+
+  /**
+   * 5f. maximize_window
+   */
+  private async executeMaximizeWindow(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const win = (args.windowName || args.name || args.window || '').trim();
+    const sysControl = SystemControlService.getInstance();
+    const res = await sysControl.controlWindow('maximize', win);
+
+    return {
+      success: true,
+      tool: 'maximize_window',
+      result: {
+        ...res,
+        spokenSummary: res.message,
+      },
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'READ_ONLY',
+    };
+  }
+
+  /**
+   * 5g. restore_window
+   */
+  private async executeRestoreWindow(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const win = (args.windowName || args.name || args.window || '').trim();
+    const sysControl = SystemControlService.getInstance();
+    const res = await sysControl.controlWindow('restore', win);
+
+    return {
+      success: true,
+      tool: 'restore_window',
+      result: {
+        ...res,
+        spokenSummary: res.message,
+      },
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'READ_ONLY',
+    };
+  }
+
+  /**
+   * 5h. close_window
+   */
+  private async executeCloseWindow(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const win = (args.windowName || args.name || args.window || '').trim();
+    const sysControl = SystemControlService.getInstance();
+    const res = await sysControl.controlWindow('close', win);
+
+    return {
+      success: true,
+      tool: 'close_window',
+      result: {
+        ...res,
+        spokenSummary: res.message,
+      },
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'REVERSIBLE',
+    };
   }
 
   /**
@@ -1478,51 +1582,8 @@ export class ToolExecutionService {
    */
   private async executeListRunningApplications(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
     const limit = Math.min(25, Math.max(5, typeof args.limit === 'number' ? args.limit : 15));
-    const runningApps: RunningApplicationInfo[] = [];
-
-    try {
-      if (os.platform() === 'linux' || os.platform() === 'darwin') {
-        const psOutput = await new Promise<string>((resolve, reject) => {
-          execFile('ps', ['-eo', 'pid,comm,%cpu,%mem', '--sort=-%mem'], (err, stdout) => {
-            if (err) reject(err);
-            else resolve(stdout);
-          });
-        });
-
-        const lines = psOutput.trim().split('\n').slice(1);
-        const seenNames = new Set<string>();
-
-        for (const line of lines) {
-          if (runningApps.length >= limit) break;
-          const parts = line.trim().split(/\s+/);
-          if (parts.length >= 4) {
-            const pid = parseInt(parts[0], 10);
-            const name = parts[1];
-            const cpu = parseFloat(parts[2]) || 0;
-            const mem = parseFloat(parts[3]) || 0;
-
-            // Filter out internal kernel threads or duplicates
-            if (!name.startsWith('[') && !seenNames.has(name)) {
-              seenNames.add(name);
-              runningApps.push({
-                pid,
-                name,
-                cpuPercent: cpu,
-                memoryPercent: mem,
-              });
-            }
-          }
-        }
-      }
-    } catch {
-      // Fallback: report node process
-      runningApps.push({
-        pid: process.pid,
-        name: 'node (REVA Server)',
-        cpuPercent: 1.2,
-        memoryPercent: 2.5,
-      });
-    }
+    const sysControl = SystemControlService.getInstance();
+    const runningApps = await sysControl.listRunningApplications(limit);
 
     const spokenSummary =
       runningApps.length > 0

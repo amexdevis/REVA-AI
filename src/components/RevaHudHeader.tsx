@@ -30,12 +30,31 @@ export const RevaHudHeader: React.FC<RevaHudHeaderProps> = ({
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      setTimeString(
-        now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-      );
-      setDateString(
-        now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()
-      );
+      const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      try {
+        const timeFormatter = new Intl.DateTimeFormat([], {
+          timeZone: userTz,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
+        const dateFormatter = new Intl.DateTimeFormat([], {
+          timeZone: userTz,
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        });
+        setTimeString(timeFormatter.format(now));
+        setDateString(dateFormatter.format(now).toUpperCase());
+      } catch {
+        setTimeString(
+          now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+        );
+        setDateString(
+          now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()
+        );
+      }
     };
 
     updateTime();
