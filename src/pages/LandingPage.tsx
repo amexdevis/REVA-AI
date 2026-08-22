@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRevaVoice } from '../hooks/useRevaVoice.js';
 import { useRevaMemory } from '../hooks/useRevaMemory.js';
 import { useRevaTools } from '../hooks/useRevaTools.js';
+import { useRevaProactive } from '../hooks/useRevaProactive.js';
 import { AmbientParticles } from '../components/AmbientParticles.js';
 import { HolographicPlatform } from '../components/HolographicPlatform.js';
 import { RevaCharacter } from '../components/RevaCharacter.js';
@@ -56,6 +57,7 @@ export const LandingPage: React.FC = () => {
     toggleMute,
     handleInterrupt,
     testGreeting,
+    sendProactiveEvent,
     sendProactiveSettingsUpdate,
     sendContextSettingsUpdate,
   } = useRevaVoice({
@@ -76,8 +78,33 @@ export const LandingPage: React.FC = () => {
     },
   });
 
+  const {
+    settings: proactiveSettings,
+    triggerEvent: triggerProactiveEvent,
+    updateSettings: updateProactiveSettings,
+  } = useRevaProactive({
+    onProactiveTrigger: (type, context) => {
+      sendProactiveEvent(type, context);
+    },
+  });
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMemoryOpen, setIsMemoryOpen] = useState(false);
+  const hasTriggeredAppOpenRef = useRef(false);
+
+  // Trigger natural app opening interaction (Step 10 Requirement 1 & 10)
+  useEffect(() => {
+    if (!hasTriggeredAppOpenRef.current && sessionState === 'READY' && voiceMode !== 'OFF') {
+      hasTriggeredAppOpenRef.current = true;
+      const timeout = setTimeout(() => {
+        triggerProactiveEvent('APP_OPEN', {
+          time: new Date().toISOString(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        });
+      }, 1200);
+      return () => clearTimeout(timeout);
+    }
+  }, [sessionState, voiceMode, triggerProactiveEvent]);
 
   // Live time and date
   const [timeString, setTimeString] = useState<string>('10:42 PM');
@@ -168,17 +195,6 @@ export const LandingPage: React.FC = () => {
           <span className="text-[10px] sm:text-xs font-mono text-purple-300/70 tracking-[0.3em] uppercase mt-0.5">
             AI COMPANION
           </span>
-        </div>
-
-        {/* Top-Center: Dedicated Voice Mode Selector (Horizontally Centered, Safely Above REVA) */}
-        <div className="flex-initial flex items-center justify-center px-2">
-          <VoiceModeSelector
-            voiceMode={voiceMode}
-            machineState={machineState}
-            wakeWordStatus={wakeWordStatus}
-            isWakeWordSupported={isWakeWordSupported}
-            onSelectMode={setVoiceMode}
-          />
         </div>
 
         {/* Top-Right: Status, Live Clock & Settings */}
@@ -282,15 +298,15 @@ export const LandingPage: React.FC = () => {
           />
         </div>
 
-        {/* Bottom-Center: Subtle Voice Talk Instruction */}
+        {/* Bottom-Center: Voice Mode Selector */}
         <div className="flex-1 flex justify-center text-center">
-          <p className="text-xs sm:text-sm text-purple-300/70 font-sans tracking-wide">
-            {voiceMode === 'HANDS_FREE'
-              ? 'Hands-Free Active — Say "Hey REVA" to talk'
-              : voiceMode === 'OFF'
-              ? 'Voice Off — Select Manual or Hands-Free to talk'
-              : 'Press Space or click mic to talk'}
-          </p>
+          <VoiceModeSelector
+            voiceMode={voiceMode}
+            machineState={machineState}
+            wakeWordStatus={wakeWordStatus}
+            isWakeWordSupported={isWakeWordSupported}
+            onSelectMode={setVoiceMode}
+          />
         </div>
 
         {/* Bottom-Right: Mood Indicator Card */}
@@ -312,9 +328,12 @@ export const LandingPage: React.FC = () => {
         wakeWordStatus={wakeWordStatus}
         isWakeWordSupported={isWakeWordSupported}
         onSelectMode={setVoiceMode}
-        proactiveSettings={diagnostics.proactive?.settings}
+        proactiveSettings={diagnostics.proactive?.settings || proactiveSettings}
         systemStatus={systemStatus}
-        onUpdateProactiveSettings={sendProactiveSettingsUpdate}
+        onUpdateProactiveSettings={(settings) => {
+          sendProactiveSettingsUpdate(settings);
+          updateProactiveSettings(settings);
+        }}
         onUpdateContextSettings={sendContextSettingsUpdate}
         onTestGreeting={testGreeting}
       />

@@ -168,6 +168,7 @@ export interface PersonalityDiagnosticsData {
 }
 
 export type ProactiveEventType =
+  | 'APP_OPEN'
   | 'USER_IDLE'
   | 'USER_RETURNED'
   | 'LONG_WORK_SESSION'
@@ -177,6 +178,7 @@ export type ProactiveEventType =
   | 'TIMER_COMPLETED'
   | 'SYSTEM_EVENT'
   | 'TIME_CONTEXT'
+  | 'CONTEXTUAL_OBSERVATION'
   | 'CONVERSATION_PAUSED';
 
 export type ProactiveConversationType =

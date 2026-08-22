@@ -137,7 +137,7 @@ export class GoogleSheetsMemoryService {
   }
 
   /**
-   * Syncs all local SQLite memories up to the Google Sheet.
+   * Syncs all local SQLite memories up to the Google Sheet with safe write policy.
    */
   public async syncAllToGoogleSheet(
     accessToken: string,
@@ -146,9 +146,32 @@ export class GoogleSheetsMemoryService {
       episodic: EpisodicMemoryRecord[];
       projects: ProjectMemoryRecord[];
       profile?: UserProfile | null;
-    }
+    },
+    options: { allowEmptyWipe?: boolean } = {}
   ): Promise<{ spreadsheetId: string; url: string; count: number }> {
+    console.log('[REVA][SHEETS] MEMORY_WRITE_STARTED - syncing to Google Sheets');
     const spreadsheetId = await this.findOrCreateMemorySheet(accessToken);
+
+    // Safe write guard: Prevent accidental wipe if local cache is unexpectedly empty
+    if (
+      data.memories.length === 0 &&
+      data.episodic.length === 0 &&
+      data.projects.length === 0 &&
+      !options.allowEmptyWipe
+    ) {
+      console.warn('[REVA][SHEETS] Local memory cache is empty. Checking remote sheet before syncing to prevent accidental data loss.');
+      try {
+        const existingData = await this.importFromGoogleSheet(accessToken);
+        if (existingData.count > 0) {
+          console.warn('[REVA][SHEETS] Remote Google Sheet has existing records. Skipping destructive blank sync.');
+          return {
+            spreadsheetId,
+            url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`,
+            count: existingData.count,
+          };
+        }
+      } catch (_) {}
+    }
 
     // Prepare Semantic Facts rows
     const semanticRows = data.memories.map((m) => [

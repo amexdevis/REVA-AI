@@ -19,7 +19,7 @@ import {
   TimerItem,
 } from '../types/voice.types.js';
 import { AudioRecorder } from '../lib/audio/audio-recorder.js';
-import { AudioPlayer } from '../lib/audio/audio-player.js';
+import { AudioPlaybackManager } from '../lib/audio/audio-playback-manager.js';
 import { WakeWordDetector } from '../lib/audio/wake-word-detector.js';
 
 export function useRevaVoice(options?: {
@@ -83,7 +83,7 @@ export function useRevaVoice(options?: {
   // Active instances refs
   const wsRef = useRef<WebSocket | null>(null);
   const recorderRef = useRef<AudioRecorder | null>(null);
-  const playerRef = useRef<AudioPlayer | null>(null);
+  const playerRef = useRef<AudioPlaybackManager | null>(null);
   const detectorRef = useRef<WakeWordDetector | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -155,10 +155,10 @@ export function useRevaVoice(options?: {
     });
   }, []);
 
-  // Initialize Player
+  // Initialize AudioPlaybackManager
   const getOrCreatePlayer = useCallback(() => {
     if (!playerRef.current) {
-      playerRef.current = new AudioPlayer({
+      playerRef.current = AudioPlaybackManager.getInstance({
         sampleRate: 24000,
         onPlaybackStateChange: (isPlaying) => {
           if (isPlaying) {
@@ -548,12 +548,12 @@ export function useRevaVoice(options?: {
         setUserAudioLevel(level);
 
         // Speech activity threshold detection
-        if (level > 0.15) {
+        if (level > 0.12) {
           lastUserSpeechTimeRef.current = Date.now();
           clearHandsFreeTimer();
 
-          // If REVA was speaking and user speaks, trigger immediate barge-in
-          if (playerRef.current?.getIsPlaying()) {
+          // If REVA was speaking and user speaks, trigger immediate barge-in (using higher threshold to avoid speaker bleed)
+          if (playerRef.current?.getIsPlaying() && level > 0.26) {
             handleInterrupt();
           }
 

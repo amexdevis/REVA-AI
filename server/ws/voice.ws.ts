@@ -5,7 +5,7 @@
 
 import { WebSocket, WebSocketServer } from 'ws';
 import { IncomingMessage } from 'http';
-import { GeminiLiveService } from '../services/gemini-live.service.js';
+import { VoiceSessionManager } from '../services/voice-session-manager.service.js';
 import { ProactiveBehaviorService } from '../services/proactive-behavior.service.js';
 import { ToolExecutionService } from '../services/tool-execution.service.js';
 import { ContextAwarenessService } from '../services/context-awareness.service.js';
@@ -21,7 +21,6 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
   wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     console.log('[REVA][WS] Client connected to Voice WebSocket endpoint');
 
-    let geminiLive: GeminiLiveService | null = null;
     let isTerminated = false;
 
     const sendMessage = (msg: ServerVoiceMessage) => {
@@ -29,6 +28,90 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
         ws.send(JSON.stringify(msg));
       }
     };
+
+    // Instantiate single VoiceSessionManager for this client connection
+    const sessionManager = new VoiceSessionManager({
+      onAudioData: (base64Audio: string) => {
+        sendMessage({
+          type: 'AUDIO_OUTPUT',
+          audio: base64Audio,
+        });
+      },
+      onInterrupted: () => {
+        sendMessage({
+          type: 'INTERRUPTED',
+        });
+      },
+      onTurnComplete: () => {
+        sendMessage({
+          type: 'TURN_COMPLETE',
+        });
+      },
+      onTranscript: (role, text) => {
+        sendMessage({
+          type: 'TRANSCRIPT',
+          role,
+          text,
+        });
+        sendMessage({
+          type: 'CONTEXT_UPDATE',
+          context: contextService.getDiagnostics(),
+        });
+      },
+      onEmotionUpdate: (personality) => {
+        sendMessage({
+          type: 'EMOTION_UPDATE',
+          personality,
+        });
+      },
+      onMemoryUpdate: () => {
+        sendMessage({
+          type: 'MEMORY_UPDATE',
+          event: 'MEMORY_DATABASE_CHANGED',
+        });
+      },
+      onMemoryRetrieval: (retrievalDiagnostics) => {
+        sendMessage({
+          type: 'MEMORY_UPDATE',
+          event: 'MEMORY_RETRIEVED',
+          memoryRetrieval: retrievalDiagnostics,
+        });
+      },
+      onProactiveUpdate: () => {
+        sendMessage({
+          type: 'PROACTIVE_UPDATE',
+          proactive: proactiveService.getDiagnostics(),
+        });
+      },
+      onToolExecuted: (result) => {
+        sendMessage({
+          type: 'TOOL_EXECUTED',
+          toolResult: result,
+        });
+      },
+      onStateChange: (state, details) => {
+        sendMessage({
+          type: 'SESSION_STATE',
+          state: state as any,
+          details,
+        });
+      },
+      onError: (err: any) => {
+        const message = err instanceof Error ? err.message : String(err);
+        sendMessage({
+          type: 'ERROR',
+          error: message,
+        });
+      },
+      onClose: (code: number, reason: string) => {
+        sendMessage({
+          type: 'SESSION_STATE',
+          state: 'OFFLINE',
+          code,
+          reason,
+        });
+      },
+    });
 
     // Wire up tool service events for this client connection
     const unsubscribeToolExecuted = toolService.onToolExecuted((result) => {
@@ -68,115 +151,17 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
       unsubscribeUrl();
       unsubscribeClipboard();
 
-      console.log('[REVA][WS] Cleaning up client voice session');
-      if (geminiLive) {
-        await geminiLive.close();
-        geminiLive = null;
-      }
-    };
-
-    // Initialize Gemini Live service for this client connection
-    const initializeGeminiLive = async () => {
-      if (geminiLive) {
-        await geminiLive.close();
-        geminiLive = null;
-      }
-
-      geminiLive = new GeminiLiveService({
-        onAudioData: (base64Audio: string) => {
-          sendMessage({
-            type: 'AUDIO_OUTPUT',
-            audio: base64Audio,
-          });
-        },
-        onInterrupted: () => {
-          sendMessage({
-            type: 'INTERRUPTED',
-          });
-        },
-        onTurnComplete: () => {
-          sendMessage({
-            type: 'TURN_COMPLETE',
-          });
-        },
-        onTranscript: (role, text) => {
-          sendMessage({
-            type: 'TRANSCRIPT',
-            role,
-            text,
-          });
-          sendMessage({
-            type: 'CONTEXT_UPDATE',
-            context: contextService.getDiagnostics(),
-          });
-        },
-        onEmotionUpdate: (personality) => {
-          sendMessage({
-            type: 'EMOTION_UPDATE',
-            personality,
-          });
-        },
-        onMemoryUpdate: () => {
-          sendMessage({
-            type: 'MEMORY_UPDATE',
-            event: 'MEMORY_DATABASE_CHANGED',
-          });
-        },
-        onMemoryRetrieval: (retrievalDiagnostics) => {
-          sendMessage({
-            type: 'MEMORY_UPDATE',
-            event: 'MEMORY_RETRIEVED',
-            memoryRetrieval: retrievalDiagnostics,
-          });
-        },
-        onProactiveUpdate: () => {
-          sendMessage({
-            type: 'PROACTIVE_UPDATE',
-            proactive: proactiveService.getDiagnostics(),
-          });
-        },
-        onToolExecuted: (result) => {
-          sendMessage({
-            type: 'TOOL_EXECUTED',
-            toolResult: result,
-          });
-        },
-        onStateChange: (state, details) => {
-          sendMessage({
-            type: 'SESSION_STATE',
-            state: state as any,
-            details,
-          });
-        },
-        onError: (err: any) => {
-          const message = err instanceof Error ? err.message : String(err);
-          sendMessage({
-            type: 'ERROR',
-            error: message,
-          });
-        },
-        onClose: (code: number, reason: string) => {
-          sendMessage({
-            type: 'SESSION_STATE',
-            state: 'OFFLINE',
-            code,
-            reason,
-          });
-        },
-      });
-
-      try {
-        await geminiLive.connect();
-      } catch (err: any) {
-        sendMessage({
-          type: 'ERROR',
-          error: err?.message || 'Failed to initialize Gemini Live connection',
-        });
-      }
+      console.log('[REVA][WS] Cleaning up client voice session via VoiceSessionManager');
+      await sessionManager.closeSession('CLIENT_DISCONNECT');
     };
 
     // Auto-connect Gemini Live on WebSocket client connection
-    initializeGeminiLive();
+    sessionManager.initializeSession().catch((err: any) => {
+      sendMessage({
+        type: 'ERROR',
+        error: err?.message || 'Failed to initialize Gemini Live connection',
+      });
+    });
 
     // Send initial context diagnostics
     sendMessage({
@@ -190,12 +175,12 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
 
         switch (payload.type) {
           case 'CONNECT':
-            await initializeGeminiLive();
+            await sessionManager.initializeSession();
             break;
 
           case 'AUDIO_INPUT':
-            if (payload.audio && geminiLive) {
-              geminiLive.sendAudioChunk(payload.audio);
+            if (payload.audio) {
+              sessionManager.sendAudioChunk(payload.audio);
             }
             break;
 
@@ -220,7 +205,7 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
               const decision = await proactiveService.evaluateEvent(
                 payload.event.type,
                 payload.event.context || {},
-                geminiLive ? 'READY' : 'OFFLINE'
+                sessionManager.isActive() ? 'READY' : 'OFFLINE'
               );
 
               sendMessage({
@@ -228,13 +213,13 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
                 proactive: proactiveService.getDiagnostics(),
               });
 
-              if (decision.decision === 'SPEAK' && decision.speechText && geminiLive) {
+              if (decision.decision === 'SPEAK' && decision.speechText && sessionManager.isActive()) {
                 console.log(`[REVA][WS] Proactive spoken trigger dispatched: "${decision.speechText}"`);
                 sendMessage({
                   type: 'PROACTIVE_SPEECH',
                   text: decision.speechText,
                 });
-                geminiLive.sendTextMessage(
+                sessionManager.sendTextMessage(
                   `[Proactive Observation] Please speak this natural conversational observation immediately without any meta-commentary: "${decision.speechText}"`
                 );
               }
@@ -272,18 +257,14 @@ export function setupVoiceWebSocket(wss: WebSocketServer) {
             break;
 
           case 'TEST_GREETING':
-            if (geminiLive) {
-              console.log('[REVA][WS] Sending diagnostic audio test request');
-              geminiLive.sendTextMessage(
-                payload.text || 'Hello REVA, please respond with a short spoken greeting to test real-time voice synthesis.'
-              );
-            }
+            console.log('[REVA][WS] Sending diagnostic audio test request');
+            sessionManager.sendTextMessage(
+              payload.text || 'Hello REVA, please respond with a short spoken greeting to test real-time voice synthesis.'
+            );
             break;
 
           case 'INTERRUPT':
-            if (geminiLive) {
-              console.log('[REVA][WS] User requested explicit interruption');
-            }
+            sessionManager.handleInterruption();
             break;
 
           case 'DISCONNECT':

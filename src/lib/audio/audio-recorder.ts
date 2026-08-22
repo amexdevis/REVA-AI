@@ -14,6 +14,7 @@ export class AudioRecorder {
   private mediaStream: MediaStream | null = null;
   private sourceNode: MediaStreamAudioSourceNode | null = null;
   private processorNode: ScriptProcessorNode | null = null;
+  private muteGainNode: GainNode | null = null;
   private isRecording = false;
   private isPaused = false;
   private targetSampleRate: number;
@@ -63,10 +64,11 @@ export class AudioRecorder {
 
         // Compute RMS level for UI visualization
         let sumSquares = 0;
-        for (let i = 0; i < inputChannelData.length; i++) {
+        const len = inputChannelData.length;
+        for (let i = 0; i < len; i++) {
           sumSquares += inputChannelData[i] * inputChannelData[i];
         }
-        const rms = Math.sqrt(sumSquares / inputChannelData.length);
+        const rms = Math.sqrt(sumSquares / len);
         const normalizedLevel = Math.min(1, rms * 5); // Normalized 0..1
 
         // Resample input buffer to 16kHz
@@ -82,8 +84,13 @@ export class AudioRecorder {
       };
 
       this.sourceNode.connect(this.processorNode);
-      // Connect to destination to keep audio process alive, muted via 0-gain or processor destination
-      this.processorNode.connect(this.audioContext.destination);
+
+      // CRITICAL FIX: Route through a 0-gain node to audioContext.destination
+      // Keeps Web Audio processing engine active without sending mic audio to speakers (no feedback/echo)
+      this.muteGainNode = this.audioContext.createGain();
+      this.muteGainNode.gain.value = 0;
+      this.processorNode.connect(this.muteGainNode);
+      this.muteGainNode.connect(this.audioContext.destination);
 
       this.isRecording = true;
       this.isPaused = false;
@@ -118,6 +125,11 @@ export class AudioRecorder {
       this.processorNode.onaudioprocess = null;
       this.processorNode.disconnect();
       this.processorNode = null;
+    }
+
+    if (this.muteGainNode) {
+      this.muteGainNode.disconnect();
+      this.muteGainNode = null;
     }
 
     if (this.sourceNode) {
@@ -190,8 +202,10 @@ export class AudioRecorder {
     let binary = '';
     const bytes = new Uint8Array(buffer);
     const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    const chunkSize = 8192;
+    for (let i = 0; i < len; i += chunkSize) {
+      const subArray = bytes.subarray(i, Math.min(i + chunkSize, len));
+      binary += String.fromCharCode.apply(null, subArray as unknown as number[]);
     }
     return btoa(binary);
   }

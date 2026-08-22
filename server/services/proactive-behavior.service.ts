@@ -292,6 +292,8 @@ export class ProactiveBehaviorService {
 
   private calculateImportance(type: ProactiveEventType, context: Record<string, any>): number {
     switch (type) {
+      case 'APP_OPEN':
+        return 0.88;
       case 'TASK_COMPLETED':
         return 0.85;
       case 'TIMER_COMPLETED':
@@ -299,7 +301,7 @@ export class ProactiveBehaviorService {
       case 'LONG_WORK_SESSION':
         return 0.75;
       case 'USER_RETURNED':
-        return context.awayMinutes && context.awayMinutes > 15 ? 0.70 : 0.60;
+        return context.awayMinutes && context.awayMinutes > 15 ? 0.72 : 0.62;
       case 'APPLICATION_CHANGED': {
         const app = (context.current || context.application || '').toLowerCase();
         // Check if application matches user's active memories/projects
@@ -309,6 +311,8 @@ export class ProactiveBehaviorService {
         }
         return 0.45;
       }
+      case 'CONTEXTUAL_OBSERVATION':
+        return 0.65;
       case 'TIME_CONTEXT':
         return 0.55;
       case 'SYSTEM_EVENT':
@@ -329,6 +333,8 @@ export class ProactiveBehaviorService {
     context: Record<string, any>
   ): ProactiveConversationType {
     switch (type) {
+      case 'APP_OPEN':
+        return 'CHECK_IN';
       case 'TASK_COMPLETED':
         return 'CELEBRATION';
       case 'LONG_WORK_SESSION':
@@ -336,6 +342,7 @@ export class ProactiveBehaviorService {
       case 'USER_RETURNED':
         return 'OBSERVATION';
       case 'APPLICATION_CHANGED':
+      case 'CONTEXTUAL_OBSERVATION':
         return 'CONTEXTUAL_COMMENT';
       case 'TIMER_COMPLETED':
         return 'REMINDER';
@@ -347,8 +354,8 @@ export class ProactiveBehaviorService {
   }
 
   /**
-   * Generates a spontaneous, short, natural proactive utterance.
-   * Leverages REVA's persistent memory and actual local context.
+   * Generates a spontaneous, short, natural proactive utterance (1-2 sentences).
+   * Leverages REVA's persistent memory, actual local context, and conversational variation.
    */
   private async generateProactiveSpeech(
     type: ProactiveEventType,
@@ -359,22 +366,86 @@ export class ProactiveBehaviorService {
     const relevantMemories = await this.memoryService.getRelevantMemories(`${type} ${currentApp}`, 2);
     const memoryContext = relevantMemories.map((m) => m.content).join('; ');
 
-    // Dynamic period of day derived strictly from user's detected timezone
+    // Dynamic period of day derived strictly from user's detected local timezone
     const timeService = TimeService.getInstance();
     const period = timeService.getPeriodOfDay();
-    const timeOfDay = period === 'MORNING' ? 'morning' : period === 'AFTERNOON' ? 'afternoon' : period === 'EVENING' ? 'evening' : 'night';
+    const isLateNight = timeService.isLateNight();
+
+    const pickRandom = (items: string[]) => items[Math.floor(Math.random() * items.length)];
 
     switch (type) {
-      case 'USER_RETURNED':
-        if (timeOfDay === 'night') return "Welcome back. Still going strong tonight?";
-        return "Hey, you're back.";
+      case 'APP_OPEN': {
+        // Natural varied openings (Step 10 Requirement 10 & 11)
+        if (isLateNight) {
+          return pickRandom([
+            "Hey. Working late tonight?",
+            "Still up? I'm here.",
+            "Hey. Burning the midnight oil?",
+            "Hey there. Ready when you are.",
+          ]);
+        }
+        if (period === 'MORNING') {
+          return pickRandom([
+            "Morning. Ready when you are.",
+            "Hey, good morning. What are we diving into today?",
+            "Hey. Good to see you.",
+            "Hi. What are we working on today?",
+            "Hey. Ready when you are.",
+          ]);
+        }
+        if (period === 'AFTERNOON') {
+          return pickRandom([
+            "Hey. Good to see you.",
+            "Hi. What are we working on today?",
+            "Hey there. Ready when you are.",
+            "Hey. I'm here.",
+            "What's on your mind?",
+          ]);
+        }
+        if (period === 'EVENING') {
+          return pickRandom([
+            "Hey, good evening.",
+            "Hey. Good to see you.",
+            "Evening. What's on your mind?",
+            "Hey. Ready when you are.",
+            "Hi. What are we working on?",
+          ]);
+        }
+        return pickRandom([
+          "Hey. I'm here.",
+          "Hey, good to see you.",
+          "Hi. What are we working on today?",
+          "Hey. Ready when you are.",
+        ]);
+      }
+
+      case 'USER_RETURNED': {
+        const awayMins = context.awayMinutes || Math.round((context.awaySeconds || 0) / 60);
+        if (awayMins >= 30) {
+          if (isLateNight) return "Welcome back. Still going strong tonight?";
+          return pickRandom([
+            "Hey, you're back.",
+            "Welcome back. Ready to pick back up?",
+            "Hey. Hope you had a good break.",
+          ]);
+        }
+        return pickRandom([
+          "Hey, you're back.",
+          "Welcome back.",
+          "Back at it?",
+        ]);
+      }
 
       case 'APPLICATION_CHANGED': {
         if (currentApp.toLowerCase().includes('vs code') || currentApp.toLowerCase().includes('code')) {
           if (memoryContext.toLowerCase().includes('reva')) {
             return "Back to coding REVA?";
           }
-          return "Back in VS Code?";
+          return pickRandom([
+            "Still working on that project?",
+            "Back in VS Code?",
+            "Ready to write some more code?",
+          ]);
         }
         if (currentApp.toLowerCase().includes('figma')) {
           return "Working on designs?";
@@ -382,28 +453,52 @@ export class ProactiveBehaviorService {
         if (currentApp.toLowerCase().includes('terminal')) {
           return "Running some commands?";
         }
+        if (currentApp.toLowerCase().includes('github')) {
+          return "Checking on the repository?";
+        }
         return `Switched to ${currentApp}?`;
+      }
+
+      case 'CONTEXTUAL_OBSERVATION': {
+        if (context.activity === 'LONG_EDITING') {
+          return "That section seems to be taking some time.";
+        }
+        if (context.activity === 'CODING_DEBUG') {
+          return "Still working on that project?";
+        }
+        return "Deep in focus mode today.";
       }
 
       case 'LONG_WORK_SESSION': {
         const hours = context.hours || 2;
-        if (hours >= 2) return "You've been at that for a while.";
+        if (hours >= 2) {
+          return pickRandom([
+            "You've been working on this for quite a while. Want a short break?",
+            "You've been at this for a while. Want me to set a short break timer?",
+            "You've been in deep focus for quite some time. Remember to stretch.",
+          ]);
+        }
         return "Deep in focus mode today.";
       }
 
       case 'TASK_COMPLETED':
-        return "Nice. You got that finished.";
+        return pickRandom([
+          "Nice. You got that finished.",
+          "Nicely done. That's checked off.",
+          "Great job wrapping that up.",
+        ]);
 
       case 'TIMER_COMPLETED':
         return "Time's up for that session.";
 
       case 'TIME_CONTEXT':
-        if (timeOfDay === 'night') return "Burning the midnight oil?";
-        if (timeOfDay === 'morning') return "Morning. Ready to dive in?";
-        return "Good afternoon.";
+        if (isLateNight) return "Burning the midnight oil?";
+        if (period === 'MORNING') return "Morning. Ready to dive in?";
+        if (period === 'AFTERNOON') return "Good afternoon.";
+        return "Good evening.";
 
       default:
-        return "Hey there.";
+        return "Hey. Ready when you are.";
     }
   }
 

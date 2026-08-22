@@ -13,6 +13,7 @@ import { MemoryConsolidationService } from './memory-consolidation.service.js';
 import { ProactiveBehaviorService } from './proactive-behavior.service.js';
 import { ToolExecutionService } from './tool-execution.service.js';
 import { ContextAwarenessService } from './context-awareness.service.js';
+import { VOICE_CONFIG, logDiagnostic } from '../config/voice.config.js';
 
 export interface GeminiLiveCallbacks {
   onAudioData: (base64Audio: string) => void;
@@ -33,7 +34,7 @@ export class GeminiLiveService {
   private ai: GoogleGenAI | null = null;
   private session: any = null;
   private isConnected = false;
-  private currentModel = 'gemini-3.1-flash-live-preview';
+  private currentModel = VOICE_CONFIG.model;
   private callbacks: GeminiLiveCallbacks;
   private personality: RevaPersonalityService;
   private memoryService: MemoryService;
@@ -50,6 +51,10 @@ export class GeminiLiveService {
 
   public getModelName(): string {
     return this.currentModel;
+  }
+
+  public getIsConnected(): boolean {
+    return this.isConnected;
   }
 
   public getPersonalityDiagnostics(): PersonalityDiagnosticsData {
@@ -73,7 +78,7 @@ export class GeminiLiveService {
         },
       });
 
-      console.log(`[REVA][GEMINI] Initiating Live session with model: ${this.currentModel}`);
+      console.log(`[REVA][GEMINI] Initiating Live session with locked voice: ${VOICE_CONFIG.voiceName} (${this.currentModel})`);
       this.callbacks.onStateChange('CONNECTING', { model: this.currentModel });
 
       const systemInstruction = await RevaPersonalityService.getSystemInstruction();
@@ -85,7 +90,7 @@ export class GeminiLiveService {
           speechConfig: {
             voiceConfig: {
               prebuiltVoiceConfig: {
-                voiceName: 'Aoede',
+                voiceName: VOICE_CONFIG.voiceName,
               },
             },
           },
@@ -645,8 +650,10 @@ export class GeminiLiveService {
           WorkingMemoryService.getInstance().addTurn('user', userText);
           ContextAwarenessService.getInstance().processUserTurn(userText);
 
-          // Deterministic memory extraction fallback to guarantee database synchronization
-          this.extractExplicitVoiceMemory(userText);
+          // Deterministic memory extraction fallback to guarantee database synchronization in non-blocking background
+          this.extractExplicitVoiceMemory(userText).catch((err) => {
+            console.error('[REVA][MEMORY] Background voice extraction error:', err);
+          });
 
           // Smart Memory Retrieval: Search relevant memories for current user utterance in background
           this.memoryService.searchMemories(userText, { limit: 6 }).then((results) => {

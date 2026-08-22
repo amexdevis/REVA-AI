@@ -226,23 +226,61 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
 
           {activeSubTab === 'proactive' && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl">
-                <div>
-                  <span className="text-zinc-200 font-medium">Proactive Autonomous Speech</span>
-                  <p className="text-zinc-400 text-[11px]">Allow REVA to speak naturally during quiet pauses</p>
+              {/* Primary STEP 10: PROACTIVE COMPANION TOGGLE */}
+              <div className="p-4 bg-gradient-to-br from-purple-950/60 to-[#18082e] border border-purple-800/80 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <div>
+                      <span className="text-zinc-100 font-medium text-xs">PROACTIVE COMPANION</span>
+                      <p className="text-purple-300/70 text-[11px]">Living presence & natural conversation initiation</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-0.5 bg-purple-950/80 rounded-lg border border-purple-800/60">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateProactiveSettings?.({ proactiveMode: true })}
+                      className={`px-3 py-1 text-[11px] font-mono rounded-md transition-all cursor-pointer ${
+                        (proactiveSettings?.proactiveMode ?? true)
+                          ? 'bg-purple-600 text-white font-semibold shadow-[0_0_12px_rgba(168,85,247,0.5)]'
+                          : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      ON
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateProactiveSettings?.({ proactiveMode: false })}
+                      className={`px-3 py-1 text-[11px] font-mono rounded-md transition-all cursor-pointer ${
+                        !(proactiveSettings?.proactiveMode ?? true)
+                          ? 'bg-rose-600/90 text-white font-semibold shadow-[0_0_12px_rgba(244,63,94,0.5)]'
+                          : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      OFF
+                    </button>
+                  </div>
                 </div>
-                <input
-                  type="checkbox"
-                  checked={proactiveSettings?.proactiveMode ?? true}
-                  onChange={(e) => onUpdateProactiveSettings?.({ proactiveMode: e.target.checked })}
-                  className="accent-purple-500 w-4 h-4 cursor-pointer"
-                />
+
+                <div className="text-[11px] text-zinc-300/80 pt-2 border-t border-purple-900/50 space-y-1">
+                  {(proactiveSettings?.proactiveMode ?? true) ? (
+                    <div className="flex items-start gap-2 text-purple-200">
+                      <span className="text-emerald-400">●</span>
+                      <span><strong>ON:</strong> REVA may naturally initiate short context-aware observations, greetings, and break check-ins when appropriate.</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2 text-rose-300">
+                      <span className="text-rose-400">●</span>
+                      <span><strong>OFF:</strong> REVA is purely reactive and will only speak when you initiate interaction.</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl">
                 <div>
                   <span className="text-zinc-200 font-medium">Quiet / Focus Mode</span>
-                  <p className="text-zinc-400 text-[11px]">Suppress proactive speech while studying or coding</p>
+                  <p className="text-zinc-400 text-[11px]">Temporarily suppress proactive speech while deep in focus</p>
                 </div>
                 <input
                   type="checkbox"
@@ -254,8 +292,8 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
 
               <div className="flex items-center justify-between p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl">
                 <div>
-                  <span className="text-zinc-200 font-medium">Long Session Wellness Alerts</span>
-                  <p className="text-zinc-400 text-[11px]">Gentle posture and break check-ins</p>
+                  <span className="text-zinc-200 font-medium">Long Session Wellness Check-ins</span>
+                  <p className="text-zinc-400 text-[11px]">Gentle posture and break check-ins during long work periods</p>
                 </div>
                 <input
                   type="checkbox"
