@@ -5,9 +5,63 @@
 
 import { Router, Request, Response } from 'express';
 import { ToolExecutionService } from '../services/tool-execution.service.js';
+import { WebIntelligenceService } from '../services/web-intelligence.service.js';
 
 export const toolsRouter = Router();
 const toolService = ToolExecutionService.getInstance();
+const webService = WebIntelligenceService.getInstance();
+
+/**
+ * GET /api/tools/web/status
+ * Get Web Intelligence configuration status
+ */
+toolsRouter.get('/web/status', (_req: Request, res: Response) => {
+  try {
+    const status = webService.getDiagnosticStatus();
+    res.json({
+      success: true,
+      status,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to get web status' });
+  }
+});
+
+/**
+ * POST /api/tools/web/search
+ * Search the web with live results
+ */
+toolsRouter.post('/web/search', async (req: Request, res: Response) => {
+  try {
+    const { query, limit, purpose, preferredDomain } = req.body;
+    const result = await webService.searchWeb({
+      query,
+      limit,
+      purpose,
+      preferredDomain,
+    });
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to perform web search' });
+  }
+});
+
+/**
+ * POST /api/tools/web/open
+ * Search and open official website
+ */
+toolsRouter.post('/web/open', async (req: Request, res: Response) => {
+  try {
+    const { query, preferredDomain } = req.body;
+    const result = await toolService.executeTool('search_and_open_website', {
+      query,
+      preferredDomain,
+    });
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to search and open website' });
+  }
+});
 
 /**
  * GET /api/tools

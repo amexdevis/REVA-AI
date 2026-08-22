@@ -188,6 +188,44 @@ export class GeminiLiveService {
                   },
                 },
                 {
+                  name: 'search_web',
+                  description:
+                    'Perform a live web search for fresh facts, news, current events, documentation, or answers. Use this whenever the user asks for latest/recent information, current status, or web facts. Never fabricate search results.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      query: {
+                        type: Type.STRING,
+                        description: 'The search query or topic to search on the live web',
+                      },
+                      purpose: {
+                        type: Type.STRING,
+                        description: 'Optional purpose: "latest_news", "fact_check", "documentation", "official_site", "general"',
+                      },
+                    },
+                    required: ['query'],
+                  },
+                },
+                {
+                  name: 'search_and_open_website',
+                  description:
+                    'Search the web for an official website or documentation, find the verified official URL, and open it directly in the browser (e.g. "search and open React documentation", "find and open GitHub repo").',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      query: {
+                        type: Type.STRING,
+                        description: 'Name of the website, documentation, or portal to find and open',
+                      },
+                      preferredDomain: {
+                        type: Type.STRING,
+                        description: 'Optional preferred domain (e.g. "react.dev", "github.com")',
+                      },
+                    },
+                    required: ['query'],
+                  },
+                },
+                {
                   name: 'open_website',
                   description: 'Open a verified web URL in the browser (e.g. YouTube, GitHub, Google, docs).',
                   parameters: {

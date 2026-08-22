@@ -133,7 +133,7 @@ export const RevaCharacter: React.FC<RevaCharacterProps> = ({
 
       {/* 2. Full-Body Character: Pure clean render with biological breathing and posture */}
       <div
-        className={`relative z-10 h-[60vh] sm:h-[64vh] md:h-[67vh] max-h-[74vh] min-h-[480px] w-auto flex items-center justify-center transition-all duration-500 ${
+        className={`relative z-10 h-[56vh] sm:h-[60vh] md:h-[63vh] max-h-[68vh] min-h-[420px] w-auto flex items-center justify-center transition-all duration-500 ${
           isOffline ? 'opacity-85' : 'opacity-100 animate-reva-breathe animate-reva-sway'
         } ${isListening ? '-translate-y-1' : 'translate-y-0'}`}
       >

@@ -1,6 +1,6 @@
 {
   "name": "REVA",
-  "description": "REVA — Voice-First AI Companion with Gemini Live, Emotional Core, Proactive Behavior, Persistent Memory, Real System Tools, and Smart Context Awareness",
+  "description": "REVA — Voice-First AI Companion with 3 Voice Modes (Manual, Hands-Free Wake Word, Voice Off), Gemini Live, Emotional Core, Google Sheets Memory, Real System Tools, and Google Search Grounding",
   "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

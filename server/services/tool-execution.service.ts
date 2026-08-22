@@ -11,6 +11,11 @@ import { MemoryService } from './memory.service.js';
 import { ProactiveBehaviorService } from './proactive-behavior.service.js';
 import { TimeService } from './time.service.js';
 import { SystemControlService } from './system-control.service.js';
+import { FileControlService } from './file-control.service.js';
+import { ConfirmationService } from './confirmation.service.js';
+import { AllowedDirectoriesService } from './allowed-directories.service.js';
+import { ProjectShortcutService } from './project-shortcut.service.js';
+import { WebIntelligenceService } from './web-intelligence.service.js';
 import {
   ToolPermissionLevel,
   ToolDefinition,
@@ -23,6 +28,7 @@ import {
   FileSearchResult,
   RunningApplicationInfo,
   WindowControlResult,
+  MultiStepPlan,
 } from '../types/tools.types.js';
 
 export interface ActiveTimerInstance {
@@ -255,6 +261,50 @@ export class ToolExecutionService {
         },
       },
       {
+        name: 'search_web',
+        description:
+          'Perform a live web search to answer questions with fresh, verified, up-to-date online information, latest news, official documentation, or facts. Never fabricate search results.',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            query: {
+              type: 'STRING',
+              description: 'The search query or topic to search on the live web',
+            },
+            purpose: {
+              type: 'STRING',
+              description: 'Optional search purpose: "latest_news", "fact_check", "documentation", "official_site", "general"',
+            },
+            limit: {
+              type: 'NUMBER',
+              description: 'Optional maximum number of search results to return (default 5)',
+            },
+          },
+          required: ['query'],
+        },
+      },
+      {
+        name: 'search_and_open_website',
+        description:
+          'Search the web for an official website, portal, or documentation, identify the verified official URL, and open it directly in the browser (e.g. "search and open React documentation", "find and open official Python site").',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            query: {
+              type: 'STRING',
+              description: 'Search query or name of the website/service to find and open',
+            },
+            preferredDomain: {
+              type: 'STRING',
+              description: 'Optional domain to prioritize (e.g. "react.dev", "github.com", "python.org")',
+            },
+          },
+          required: ['query'],
+        },
+      },
+      {
         name: 'open_website',
         description: 'Open a verified web URL or search query in the browser (e.g. YouTube, GitHub, Documentation).',
         permission: 'REVERSIBLE',
@@ -412,25 +462,231 @@ export class ToolExecutionService {
       },
       {
         name: 'search_files',
-        description: 'Search for files by name or extension in the local workspace directory.',
+        description: 'Search for real files by name, keyword, or extension across approved user directories (Documents, Projects, Downloads, Desktop, Pictures, Workspace).',
         permission: 'READ_ONLY',
         parameters: {
           type: 'OBJECT',
           properties: {
             query: {
               type: 'STRING',
-              description: 'File name keyword or search phrase',
+              description: 'File name keyword or search phrase (e.g. "presentation", "reva", "notes")',
             },
             directory: {
               type: 'STRING',
-              description: 'Optional subfolder to restrict the search within',
+              description: 'Optional approved directory or project alias (e.g. "Documents", "Projects", "Downloads", "Desktop", "reva")',
             },
             extension: {
               type: 'STRING',
-              description: 'Optional file extension filter (e.g. "ts", "json", "md")',
+              description: 'Optional file extension filter (e.g. "txt", "pdf", "ts", "json", "md")',
             },
           },
-          required: ['query'],
+        },
+      },
+      {
+        name: 'open_file',
+        description: 'Open a verified file inside approved user directories or via project shortcuts (e.g. "open my REVA project file", "open presentation.pptx").',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            filePathOrName: {
+              type: 'STRING',
+              description: 'File name, relative path, or project shortcut to open',
+            },
+            directory: {
+              type: 'STRING',
+              description: 'Optional approved directory to search within (e.g. "Documents", "Projects")',
+            },
+          },
+          required: ['filePathOrName'],
+        },
+      },
+      {
+        name: 'create_file',
+        description: 'Create a real file with content inside approved directories (e.g. "create ideas.txt in Documents"). Requires confirmation if file exists.',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            fileName: {
+              type: 'STRING',
+              description: 'Name or path of the file to create (e.g. "ideas.txt", "notes/todo.txt")',
+            },
+            content: {
+              type: 'STRING',
+              description: 'Text content to write into the file',
+            },
+            directory: {
+              type: 'STRING',
+              description: 'Optional approved directory (e.g. "Documents", "Projects", "Desktop")',
+            },
+            overwrite: {
+              type: 'BOOLEAN',
+              description: 'Whether to overwrite an existing file (requires confirmation first)',
+            },
+          },
+          required: ['fileName'],
+        },
+      },
+      {
+        name: 'create_folder',
+        description: 'Create a real folder inside approved directories (e.g. "create a folder called REVA Assets in Documents").',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            folderName: {
+              type: 'STRING',
+              description: 'Name of folder to create (e.g. "REVA Assets", "Test")',
+            },
+            directory: {
+              type: 'STRING',
+              description: 'Optional approved directory (e.g. "Documents", "Projects", "Desktop")',
+            },
+          },
+          required: ['folderName'],
+        },
+      },
+      {
+        name: 'rename_file',
+        description: 'Rename a file or folder inside approved directories (e.g. "rename project.txt to final-project.txt"). Confirms before overwriting.',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            sourcePathOrName: {
+              type: 'STRING',
+              description: 'Current file or folder name/path',
+            },
+            newName: {
+              type: 'STRING',
+              description: 'New file or folder name',
+            },
+            directory: {
+              type: 'STRING',
+              description: 'Optional approved directory to look in',
+            },
+            confirmed: {
+              type: 'BOOLEAN',
+              description: 'Whether rename action is confirmed',
+            },
+          },
+          required: ['sourcePathOrName', 'newName'],
+        },
+      },
+      {
+        name: 'copy_file',
+        description: 'Copy a file or folder inside approved directories (e.g. "copy notes.txt to Documents"). Confirms before overwriting.',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            sourcePathOrName: {
+              type: 'STRING',
+              description: 'Source file or folder path/name',
+            },
+            destinationPathOrDir: {
+              type: 'STRING',
+              description: 'Destination directory or path (must be inside approved directories)',
+            },
+            overwrite: {
+              type: 'BOOLEAN',
+              description: 'Whether to overwrite if destination already exists',
+            },
+          },
+          required: ['sourcePathOrName', 'destinationPathOrDir'],
+        },
+      },
+      {
+        name: 'move_file',
+        description: 'Move a file or folder inside approved directories (e.g. "move project folder to Documents"). Confirms before overwriting.',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            sourcePathOrName: {
+              type: 'STRING',
+              description: 'Source file or folder path/name to move',
+            },
+            destinationPathOrDir: {
+              type: 'STRING',
+              description: 'Destination directory or path (must be inside approved directories)',
+            },
+            overwrite: {
+              type: 'BOOLEAN',
+              description: 'Whether to overwrite if destination exists',
+            },
+            confirmed: {
+              type: 'BOOLEAN',
+              description: 'Whether the move is explicitly confirmed',
+            },
+          },
+          required: ['sourcePathOrName', 'destinationPathOrDir'],
+        },
+      },
+      {
+        name: 'execute_multi_step',
+        description: 'Execute a sequential multi-step computer control plan safely with rollback on intermediate failure (e.g. "create folder Test and create hello.txt inside it").',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            description: {
+              type: 'STRING',
+              description: 'High-level description of the multi-step plan',
+            },
+            steps: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  tool: { type: 'STRING', description: 'Tool name to execute' },
+                  args: { type: 'OBJECT', description: 'Arguments object for the tool' },
+                  description: { type: 'STRING', description: 'Step description' },
+                },
+                required: ['tool', 'args'],
+              },
+              description: 'List of ordered steps to execute sequentially',
+            },
+          },
+          required: ['steps'],
+        },
+      },
+      {
+        name: 'confirm_action',
+        description: 'Confirm or cancel a pending sensitive or overwrite action (e.g. user answers "yes", "replace it", "sure", or "no", "cancel").',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            responsePhrase: {
+              type: 'STRING',
+              description: 'The user response phrase (e.g. "yes", "replace it", "sure", "cancel", "no")',
+            },
+            confirmationId: {
+              type: 'STRING',
+              description: 'Optional specific confirmation ID',
+            },
+          },
+          required: ['responsePhrase'],
+        },
+      },
+      {
+        name: 'list_allowed_directories',
+        description: 'List all user-approved safe directory locations for file operations (Documents, Downloads, Desktop, Pictures, Projects, Workspace).',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {},
+        },
+      },
+      {
+        name: 'list_project_shortcuts',
+        description: 'List all configured project shortcuts (e.g. REVA Project path).',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {},
         },
       },
       {
@@ -557,23 +813,72 @@ export class ToolExecutionService {
     const startTime = Date.now();
     const cleanArgs = args || {};
 
-    // 1. Strict Security Check: Ban arbitrary shell execution
+    // 1. Strict Security Check: Ban arbitrary shell execution, browser script injections, credential extraction, and blocked destructive actions
     if (
       toolName === 'run_shell_command' ||
       toolName === 'exec_shell' ||
       toolName === 'terminal_command' ||
-      toolName === 'eval_code'
+      toolName === 'eval_code' ||
+      toolName === 'run_shell' ||
+      toolName === 'eval_in_browser' ||
+      toolName === 'inject_js' ||
+      toolName === 'run_browser_script' ||
+      toolName === 'execute_browser_javascript'
     ) {
       const execTime = Date.now() - startTime;
       const res: ToolExecutionResult = {
         success: false,
         tool: toolName,
-        error: 'Arbitrary shell execution is strictly disallowed for system security.',
+        error: 'Arbitrary shell and browser script execution are strictly disallowed for system security. All actions must use predefined typed tools.',
         executionTimeMs: execTime,
         timestamp: new Date().toISOString(),
         permissionLevel: 'DESTRUCTIVE',
       };
-      this.recordHistory(res, '[REJECTED ARBITRARY SHELL]');
+      this.recordHistory(res, '[REJECTED ARBITRARY CODE/SCRIPT EXECUTION]');
+      return res;
+    }
+
+    if (
+      toolName === 'extract_passwords' ||
+      toolName === 'read_cookies' ||
+      toolName === 'get_browser_passwords' ||
+      toolName === 'bypass_auth' ||
+      toolName === 'bypass_captcha' ||
+      toolName === 'buy_product' ||
+      toolName === 'make_payment' ||
+      toolName === 'transfer_money' ||
+      toolName === 'submit_order'
+    ) {
+      const execTime = Date.now() - startTime;
+      const res: ToolExecutionResult = {
+        success: false,
+        tool: toolName,
+        error: 'Access to credentials, cookies, authentication bypass, and automated financial purchases are strictly blocked for user privacy and security.',
+        executionTimeMs: execTime,
+        timestamp: new Date().toISOString(),
+        permissionLevel: 'DESTRUCTIVE',
+      };
+      this.recordHistory(res, '[BLOCKED PRIVACY/FINANCIAL OPERATION]');
+      return res;
+    }
+
+    if (
+      toolName === 'delete_file' ||
+      toolName === 'delete_folder' ||
+      toolName === 'format_drive' ||
+      toolName === 'system_reset' ||
+      toolName === 'registry_edit'
+    ) {
+      const execTime = Date.now() - startTime;
+      const res: ToolExecutionResult = {
+        success: false,
+        tool: toolName,
+        error: 'Permanent file or folder deletion is disabled for safety in REVA Step 7B.',
+        executionTimeMs: execTime,
+        timestamp: new Date().toISOString(),
+        permissionLevel: 'DESTRUCTIVE',
+      };
+      this.recordHistory(res, '[BLOCKED DESTRUCTIVE OPERATION]');
       return res;
     }
 
@@ -611,6 +916,14 @@ export class ToolExecutionService {
 
         case 'get_current_time':
           executionResult = await this.executeGetCurrentTime(startTime);
+          break;
+
+        case 'search_web':
+          executionResult = await this.executeSearchWeb(cleanArgs, startTime);
+          break;
+
+        case 'search_and_open_website':
+          executionResult = await this.executeSearchAndOpenWebsite(cleanArgs, startTime);
           break;
 
         case 'open_website':
@@ -659,6 +972,46 @@ export class ToolExecutionService {
 
         case 'search_files':
           executionResult = await this.executeSearchFiles(cleanArgs, startTime);
+          break;
+
+        case 'open_file':
+          executionResult = await this.executeOpenFile(cleanArgs, startTime);
+          break;
+
+        case 'create_file':
+          executionResult = await this.executeCreateFile(cleanArgs, startTime);
+          break;
+
+        case 'create_folder':
+          executionResult = await this.executeCreateFolder(cleanArgs, startTime);
+          break;
+
+        case 'rename_file':
+          executionResult = await this.executeRenameFile(cleanArgs, startTime);
+          break;
+
+        case 'copy_file':
+          executionResult = await this.executeCopyFile(cleanArgs, startTime);
+          break;
+
+        case 'move_file':
+          executionResult = await this.executeMoveFile(cleanArgs, startTime);
+          break;
+
+        case 'execute_multi_step':
+          executionResult = await this.executeMultiStep(cleanArgs, startTime);
+          break;
+
+        case 'confirm_action':
+          executionResult = await this.executeConfirmAction(cleanArgs, startTime);
+          break;
+
+        case 'list_allowed_directories':
+          executionResult = await this.executeListAllowedDirectories(startTime);
+          break;
+
+        case 'list_project_shortcuts':
+          executionResult = await this.executeListProjectShortcuts(startTime);
           break;
 
         case 'create_note':
@@ -785,6 +1138,88 @@ export class ToolExecutionService {
       timestamp: new Date().toISOString(),
       permissionLevel: 'READ_ONLY',
     };
+  }
+
+  /**
+   * 3a. search_web (Step 8 Web Intelligence)
+   */
+  private async executeSearchWeb(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const query = (args.query || args.q || args.searchQuery || '').trim();
+    const purpose = args.purpose;
+    const limit = typeof args.limit === 'number' ? args.limit : 5;
+
+    if (!query) {
+      return {
+        success: false,
+        tool: 'search_web',
+        error: 'Please specify a query to search on the web.',
+        executionTimeMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+        permissionLevel: 'READ_ONLY',
+      };
+    }
+
+    const webService = WebIntelligenceService.getInstance();
+    const searchRes = await webService.searchWeb({
+      query,
+      purpose,
+      limit,
+    });
+
+    if (!searchRes.success || !searchRes.data) {
+      return {
+        success: false,
+        tool: 'search_web',
+        error: searchRes.error || "I couldn't access the web right now.",
+        executionTimeMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+        permissionLevel: 'READ_ONLY',
+      };
+    }
+
+    return {
+      success: true,
+      tool: 'search_web',
+      result: searchRes.data,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'READ_ONLY',
+    };
+  }
+
+  /**
+   * 3b. search_and_open_website (Step 8 Official Site Navigation)
+   */
+  private async executeSearchAndOpenWebsite(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const query = (args.query || args.name || args.website || '').trim();
+    const preferredDomain = (args.preferredDomain || args.domain || '').trim();
+
+    if (!query) {
+      return {
+        success: false,
+        tool: 'search_and_open_website',
+        error: 'Please specify the name of the website or documentation to find and open.',
+        executionTimeMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+        permissionLevel: 'REVERSIBLE',
+      };
+    }
+
+    const webService = WebIntelligenceService.getInstance();
+    const result = await webService.searchAndOpenWebsite(query, preferredDomain || undefined);
+
+    // Broadcast opened URL to frontend listeners
+    if (result.success && result.result?.targetUrl) {
+      this.onUrlOpenCallbacks.forEach((cb) => {
+        try {
+          cb(result.result.targetUrl);
+        } catch (err) {
+          console.warn('[REVA][TOOLS] Error in onUrlOpen callback:', err);
+        }
+      });
+    }
+
+    return result;
   }
 
   /**
@@ -1087,113 +1522,203 @@ export class ToolExecutionService {
   }
 
   /**
-   * 8. search_files
+   * 8. search_files (Step 7B File Search with safe directory support)
    */
   private async executeSearchFiles(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
-    const query = (args.query || '').toLowerCase().trim();
-    const extFilter = (args.extension || '').toLowerCase().replace(/^\./, '').trim();
-    const subDir = (args.directory || '').trim();
-
-    const workspaceRoot = process.cwd();
-    let targetDir = workspaceRoot;
-
-    // Validate path traversal security: cannot escape workspaceRoot
-    if (subDir) {
-      const resolved = path.resolve(workspaceRoot, subDir);
-      if (!resolved.startsWith(workspaceRoot)) {
-        return {
-          success: false,
-          tool: 'search_files',
-          error: 'Directory path traversal outside the project workspace is disallowed.',
-          executionTimeMs: Date.now() - startTime,
-          timestamp: new Date().toISOString(),
-          permissionLevel: 'READ_ONLY',
-        };
-      }
-      if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) {
-        targetDir = resolved;
-      }
-    }
-
-    const matches: FileSearchResult[] = [];
-    const maxResults = 30;
-    const maxDepth = 4;
-
-    const scanDirectory = (currentPath: string, currentDepth: number) => {
-      if (currentDepth > maxDepth || matches.length >= maxResults) return;
-
-      try {
-        const entries = fs.readdirSync(currentPath, { withFileTypes: true });
-        for (const entry of entries) {
-          if (matches.length >= maxResults) break;
-
-          // Skip node_modules, .git, dist, data, cache
-          if (
-            entry.name === 'node_modules' ||
-            entry.name === '.git' ||
-            entry.name === 'dist' ||
-            entry.name.startsWith('.cache') ||
-            entry.name === 'data'
-          ) {
-            continue;
-          }
-
-          const fullPath = path.join(currentPath, entry.name);
-          const relPath = path.relative(workspaceRoot, fullPath);
-          const ext = path.extname(entry.name).replace(/^\./, '').toLowerCase();
-
-          if (entry.isDirectory()) {
-            if (query && entry.name.toLowerCase().includes(query)) {
-              matches.push({
-                name: entry.name,
-                path: fullPath,
-                relativePath: relPath,
-                extension: 'folder',
-                sizeBytes: 0,
-                sizeFormatted: 'directory',
-                modifiedAt: new Date().toISOString(),
-                isDirectory: true,
-              });
-            }
-            scanDirectory(fullPath, currentDepth + 1);
-          } else if (entry.isFile()) {
-            const matchesQuery = !query || entry.name.toLowerCase().includes(query);
-            const matchesExt = !extFilter || ext === extFilter;
-
-            if (matchesQuery && matchesExt) {
-              const stat = fs.statSync(fullPath);
-              const kb = (stat.size / 1024).toFixed(1);
-              matches.push({
-                name: entry.name,
-                path: fullPath,
-                relativePath: relPath,
-                extension: ext,
-                sizeBytes: stat.size,
-                sizeFormatted: `${kb} KB`,
-                modifiedAt: stat.mtime.toISOString(),
-                isDirectory: false,
-              });
-            }
-          }
-        }
-      } catch {
-        // Skip inaccessible directories
-      }
-    };
-
-    scanDirectory(targetDir, 0);
-
-    const spokenSummary =
-      matches.length > 0
-        ? `Found ${matches.length} file${matches.length === 1 ? '' : 's'} matching "${query || extFilter}": ${matches.slice(0, 3).map((f) => f.name).join(', ')}${matches.length > 3 ? ' and more' : ''}.`
-        : `No files found matching "${query || extFilter}".`;
+    const fileControl = FileControlService.getInstance();
+    const searchResult = await fileControl.searchFiles({
+      query: args.query,
+      directory: args.directory,
+      extension: args.extension,
+      limit: typeof args.limit === 'number' ? args.limit : 20,
+    });
 
     return {
       success: true,
       tool: 'search_files',
+      result: searchResult,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'READ_ONLY',
+    };
+  }
+
+  /**
+   * 8b. open_file (Step 7B Open File)
+   */
+  private async executeOpenFile(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const fileControl = FileControlService.getInstance();
+    return await fileControl.openFile({
+      filePathOrName: args.filePathOrName || args.path || args.fileName || args.name,
+      directory: args.directory,
+    });
+  }
+
+  /**
+   * 8c. create_file (Step 7B Create File with Overwrite Protection)
+   */
+  private async executeCreateFile(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const fileControl = FileControlService.getInstance();
+    return await fileControl.createFile({
+      fileName: args.fileName || args.name || args.path,
+      content: args.content,
+      directory: args.directory,
+      overwrite: Boolean(args.overwrite),
+    });
+  }
+
+  /**
+   * 8d. create_folder (Step 7B Create Folder)
+   */
+  private async executeCreateFolder(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const fileControl = FileControlService.getInstance();
+    return await fileControl.createFolder({
+      folderName: args.folderName || args.name || args.path,
+      directory: args.directory,
+    });
+  }
+
+  /**
+   * 8e. rename_file (Step 7B Rename File/Folder with Confirmation)
+   */
+  private async executeRenameFile(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const fileControl = FileControlService.getInstance();
+    return await fileControl.renameFile({
+      sourcePathOrName: args.sourcePathOrName || args.source || args.oldName || args.name,
+      newName: args.newName || args.targetName || args.newPath,
+      directory: args.directory,
+      confirmed: Boolean(args.confirmed),
+    });
+  }
+
+  /**
+   * 8f. copy_file (Step 7B Copy File/Folder with Overwrite Protection)
+   */
+  private async executeCopyFile(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const fileControl = FileControlService.getInstance();
+    return await fileControl.copyFile({
+      sourcePathOrName: args.sourcePathOrName || args.source || args.from,
+      destinationPathOrDir: args.destinationPathOrDir || args.destination || args.dest || args.to,
+      overwrite: Boolean(args.overwrite),
+    });
+  }
+
+  /**
+   * 8g. move_file (Step 7B Move File/Folder with Overwrite Protection)
+   */
+  private async executeMoveFile(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const fileControl = FileControlService.getInstance();
+    return await fileControl.moveFile({
+      sourcePathOrName: args.sourcePathOrName || args.source || args.from,
+      destinationPathOrDir: args.destinationPathOrDir || args.destination || args.dest || args.to,
+      overwrite: Boolean(args.overwrite),
+      confirmed: Boolean(args.confirmed),
+    });
+  }
+
+  /**
+   * 8h. execute_multi_step (Step 7B Multi-Step Safe Sequence with Rollback)
+   */
+  private async executeMultiStep(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const fileControl = FileControlService.getInstance();
+    const rawSteps = Array.isArray(args.steps) ? args.steps : [];
+
+    if (rawSteps.length === 0) {
+      return {
+        success: false,
+        tool: 'execute_multi_step',
+        error: 'Multi-step plan must contain at least one step.',
+        executionTimeMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+        permissionLevel: 'REVERSIBLE',
+      };
+    }
+
+    const multiStepResult = await fileControl.executeMultiStep(
+      {
+        description: args.description || 'Multi-step sequence',
+        steps: rawSteps,
+      },
+      this.executeTool.bind(this)
+    );
+
+    return {
+      success: multiStepResult.allSucceeded,
+      tool: 'execute_multi_step',
+      result: multiStepResult,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'REVERSIBLE',
+    };
+  }
+
+  /**
+   * 8i. confirm_action (Step 7B Confirmation Service Handler)
+   */
+  private async executeConfirmAction(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const confirmationService = ConfirmationService.getInstance();
+    const phrase = String(args.responsePhrase || args.response || args.answer || 'yes');
+    const confirmationId = args.confirmationId ? String(args.confirmationId) : undefined;
+
+    const outcome = await confirmationService.handleConfirmationResponse(phrase, confirmationId);
+
+    return {
+      success: outcome.handled,
+      tool: 'confirm_action',
       result: {
-        count: matches.length,
-        files: matches,
+        handled: outcome.handled,
+        confirmed: outcome.confirmed,
+        spokenSummary: outcome.message,
+        executionResult: outcome.result,
+      },
+      error: !outcome.handled ? outcome.message : undefined,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'REVERSIBLE',
+    };
+  }
+
+  /**
+   * 8j. list_allowed_directories (Step 7B Allowed Directories)
+   */
+  private async executeListAllowedDirectories(startTime: number): Promise<ToolExecutionResult> {
+    const allowedDirs = AllowedDirectoriesService.getInstance();
+    const directories = allowedDirs.getAllowedDirectories();
+
+    const spokenSummary = `Approved directories are: ${directories.map((d) => d.name).join(', ')}.`;
+
+    return {
+      success: true,
+      tool: 'list_allowed_directories',
+      result: {
+        count: directories.length,
+        directories,
+        spokenSummary,
+      },
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'READ_ONLY',
+    };
+  }
+
+  /**
+   * 8k. list_project_shortcuts (Step 7B Project Shortcuts)
+   */
+  private async executeListProjectShortcuts(startTime: number): Promise<ToolExecutionResult> {
+    const shortcutService = ProjectShortcutService.getInstance();
+    const shortcuts = shortcutService.getAllShortcuts();
+
+    const spokenSummary =
+      shortcuts.length > 0
+        ? `Configured shortcuts include: ${shortcuts.map((s) => `${s.name} (${s.alias})`).join(', ')}.`
+        : 'No custom project shortcuts configured.';
+
+    return {
+      success: true,
+      tool: 'list_project_shortcuts',
+      result: {
+        count: shortcuts.length,
+        shortcuts,
         spokenSummary,
       },
       executionTimeMs: Date.now() - startTime,
@@ -1581,23 +2106,13 @@ export class ToolExecutionService {
    * 15. list_running_applications
    */
   private async executeListRunningApplications(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
-    const limit = Math.min(25, Math.max(5, typeof args.limit === 'number' ? args.limit : 15));
     const sysControl = SystemControlService.getInstance();
-    const runningApps = await sysControl.listRunningApplications(limit);
-
-    const spokenSummary =
-      runningApps.length > 0
-        ? `There are ${runningApps.length} active processes visible. Top applications include: ${runningApps.slice(0, 4).map((a) => a.name).join(', ')}.`
-        : 'Process list is currently unavailable.';
+    const listResult = await sysControl.listRunningApplications();
 
     return {
       success: true,
       tool: 'list_running_applications',
-      result: {
-        count: runningApps.length,
-        applications: runningApps,
-        spokenSummary,
-      },
+      result: listResult,
       executionTimeMs: Date.now() - startTime,
       timestamp: new Date().toISOString(),
       permissionLevel: 'READ_ONLY',

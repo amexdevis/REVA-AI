@@ -124,6 +124,80 @@ export interface FileSearchResult {
   sizeFormatted: string;
   modifiedAt: string;
   isDirectory: boolean;
+  parentDir?: string;
+}
+
+export interface AllowedDirectoryInfo {
+  id: string;
+  name: string;
+  path: string;
+  description: string;
+  isDefault: boolean;
+  exists: boolean;
+}
+
+export interface FileOperationResult {
+  action: string;
+  path: string;
+  relativePath?: string;
+  sourcePath?: string;
+  destPath?: string;
+  name?: string;
+  sizeBytes?: number;
+  isDirectory?: boolean;
+  created?: boolean;
+  copied?: boolean;
+  moved?: boolean;
+  renamed?: boolean;
+  overwrite?: boolean;
+  spokenSummary: string;
+}
+
+export type PendingActionType =
+  | 'RENAME'
+  | 'COPY_OVERWRITE'
+  | 'MOVE'
+  | 'DISRUPTIVE_FILE'
+  | 'MULTI_STEP';
+
+export interface PendingAction {
+  id: string;
+  type: PendingActionType;
+  summary: string;
+  promptQuestion: string;
+  details: Record<string, any>;
+  createdAt: number;
+  expiresAt: number;
+  executor: () => Promise<ToolExecutionResult>;
+}
+
+export interface MultiStepPlanItem {
+  tool: string;
+  args: Record<string, any>;
+  description?: string;
+  optional?: boolean;
+}
+
+export interface MultiStepPlan {
+  description?: string;
+  steps: MultiStepPlanItem[];
+}
+
+export interface MultiStepExecutionResult {
+  totalSteps: number;
+  completedSteps: number;
+  allSucceeded: boolean;
+  steps: Array<{
+    stepNumber: number;
+    tool: string;
+    description?: string;
+    success: boolean;
+    result?: any;
+    error?: string;
+  }>;
+  rolledBack: boolean;
+  rollbackDetails?: string;
+  spokenSummary: string;
 }
 
 export interface RunningApplicationInfo {
@@ -140,4 +214,35 @@ export interface WindowControlResult {
   success: boolean;
   supported: boolean;
   message: string;
+}
+
+export interface WebSearchResultItem {
+  title: string;
+  url: string;
+  source: string;
+  snippet: string;
+  publishedAt?: string;
+  isOfficial?: boolean;
+}
+
+export interface WebSearchResponse {
+  query: string;
+  provider: string;
+  count: number;
+  results: WebSearchResultItem[];
+  topSource?: WebSearchResultItem;
+  spokenSummary: string;
+  executedAt: string;
+}
+
+export interface WebOpenSearchResult {
+  success: boolean;
+  query: string;
+  targetUrl?: string;
+  title?: string;
+  source?: string;
+  isOfficial?: boolean;
+  action: string;
+  spokenSummary: string;
+  error?: string;
 }

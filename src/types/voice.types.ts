@@ -15,6 +15,27 @@ export type VoiceSessionState =
   | 'RECONNECTING'
   | 'ERROR';
 
+export type VoiceMode = 'MANUAL' | 'HANDS_FREE' | 'OFF';
+
+export type VoiceMachineState =
+  | 'OFF'
+  | 'MANUAL_IDLE'
+  | 'MANUAL_LISTENING'
+  | 'WAKE_LISTENING'
+  | 'CONNECTING'
+  | 'LISTENING'
+  | 'THINKING'
+  | 'SPEAKING'
+  | 'ERROR';
+
+export type WakeWordStatus =
+  | 'NOT_SUPPORTED'
+  | 'IDLE'
+  | 'LISTENING'
+  | 'DETECTED'
+  | 'PAUSED'
+  | 'ERROR';
+
 export type MicrophonePermissionState =
   | 'UNINITIALIZED'
   | 'REQUESTING'
@@ -228,6 +249,9 @@ export interface MemoryRetrievalDiagnostics {
 }
 
 export interface VoiceDiagnostics {
+  voiceMode?: VoiceMode;
+  machineState?: VoiceMachineState;
+  wakeWordStatus?: WakeWordStatus;
   revaVoiceState: VoiceSessionState;
   geminiLiveState: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
   micState: MicrophonePermissionState;

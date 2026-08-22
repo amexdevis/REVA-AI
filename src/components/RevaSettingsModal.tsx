@@ -4,13 +4,26 @@
  */
 
 import React, { useState } from 'react';
-import { X, Sparkles, Volume2, ShieldCheck, Activity, Database, Cpu } from 'lucide-react';
-import { ProactiveSettings, VoiceDiagnostics, SystemStatusData } from '../types/voice.types.js';
+import { X, Sparkles, Volume2, ShieldCheck, Activity, Database, Cpu, Mic, MicOff } from 'lucide-react';
+import {
+  ProactiveSettings,
+  VoiceDiagnostics,
+  SystemStatusData,
+  VoiceMode,
+  VoiceMachineState,
+  WakeWordStatus,
+} from '../types/voice.types.js';
+import { VoiceModeSelector } from './VoiceModeSelector.js';
 
 interface RevaSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   diagnostics: VoiceDiagnostics;
+  voiceMode?: VoiceMode;
+  machineState?: VoiceMachineState;
+  wakeWordStatus?: WakeWordStatus;
+  isWakeWordSupported?: boolean;
+  onSelectMode?: (mode: VoiceMode) => void;
   proactiveSettings?: ProactiveSettings;
   systemStatus?: SystemStatusData | null;
   onUpdateProactiveSettings?: (settings: Partial<ProactiveSettings>) => void;
@@ -27,6 +40,11 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
   isOpen,
   onClose,
   diagnostics,
+  voiceMode = 'MANUAL',
+  machineState = 'MANUAL_IDLE',
+  wakeWordStatus = 'IDLE',
+  isWakeWordSupported = true,
+  onSelectMode,
   proactiveSettings,
   systemStatus,
   onUpdateProactiveSettings,
@@ -102,6 +120,56 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
         <div className="p-6 max-h-[65vh] overflow-y-auto space-y-4 text-xs font-mono">
           {activeSubTab === 'general' && (
             <div className="space-y-4">
+              {/* Step 9 Voice Mode Control Section */}
+              <div className="p-3.5 bg-gradient-to-br from-purple-950/40 to-[#18082e] border border-purple-800/60 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mic className="w-4 h-4 text-purple-300" />
+                    <span className="text-zinc-200 font-medium">Voice Activation Mode</span>
+                  </div>
+                  {onSelectMode && (
+                    <VoiceModeSelector
+                      voiceMode={voiceMode}
+                      machineState={machineState}
+                      wakeWordStatus={wakeWordStatus}
+                      isWakeWordSupported={isWakeWordSupported}
+                      onSelectMode={onSelectMode}
+                    />
+                  )}
+                </div>
+
+                <div className="text-[11px] text-zinc-400 space-y-1.5 pt-1 border-t border-purple-900/40">
+                  <div className="flex items-start gap-2">
+                    <span className="text-purple-300 font-semibold min-w-[75px]">MANUAL:</span>
+                    <span>Click mic or press Space to talk. Default, highest privacy.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-pink-300 font-semibold min-w-[75px]">HANDS-FREE:</span>
+                    <span>
+                      Local "Hey REVA" detection. Only activates Gemini Live when wake word is spoken.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-rose-300 font-semibold min-w-[75px]">OFF:</span>
+                    <span>Completely releases and disables the microphone. Zero audio processing.</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 text-[10px] text-zinc-500">
+                  <span>Local Wake Engine:</span>
+                  <span
+                    className={
+                      isWakeWordSupported
+                        ? 'text-emerald-400 font-medium'
+                        : 'text-amber-400 font-medium'
+                    }
+                  >
+                    {isWakeWordSupported ? 'Web Speech API (Local & Active)' : 'Unavailable in this browser'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Identity & Persona */}
               <div className="p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-300 font-medium">Voice & Persona</span>
@@ -124,6 +192,7 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
                 </p>
               </div>
 
+              {/* Gemini Live Realtime Voice */}
               <div className="p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-300 font-medium">Gemini Live Realtime Voice</span>
@@ -144,6 +213,7 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
                 )}
               </div>
 
+              {/* Barge-in / Interruption */}
               <div className="p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl space-y-2">
                 <span className="text-zinc-300 font-medium">Barge-in / Interruption</span>
                 <p className="text-zinc-400 text-[11px]">
@@ -199,67 +269,99 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
 
           {activeSubTab === 'system' && (
             <div className="space-y-3">
-              {/* Context Awareness Master Toggle */}
               <div className="flex items-center justify-between p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl">
                 <div>
-                  <span className="text-zinc-200 font-medium">Smart Context Awareness Engine</span>
-                  <p className="text-zinc-400 text-[11px]">Continuously tracks conversation topics, active tasks, and environment</p>
+                  <span className="text-zinc-200 font-medium">Context & Activity Awareness</span>
+                  <p className="text-zinc-400 text-[11px]">Tracks conversation topics and background activity</p>
                 </div>
                 <input
-                  id="toggle-context-awareness"
                   type="checkbox"
-                  checked={diagnostics.context?.awarenessStatus !== 'OFF'}
-                  onChange={(e) => onUpdateContextSettings?.({ contextAwarenessEnabled: e.target.checked })}
+                  checked={diagnostics.context?.contextAwarenessEnabled ?? true}
+                  onChange={(e) =>
+                    onUpdateContextSettings?.({ contextAwarenessEnabled: e.target.checked })
+                  }
                   className="accent-purple-500 w-4 h-4 cursor-pointer"
                 />
               </div>
 
-              {/* Time Awareness Toggle */}
-              <div className="flex items-center justify-between p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl">
-                <div>
-                  <span className="text-zinc-200 font-medium">Time & Day Awareness</span>
-                  <p className="text-zinc-400 text-[11px]">Adapts greetings and advice to morning, afternoon, night, and weekend routines</p>
-                </div>
-                <input
-                  id="toggle-time-awareness"
-                  type="checkbox"
-                  defaultChecked={true}
-                  onChange={(e) => onUpdateContextSettings?.({ timeAwarenessEnabled: e.target.checked })}
-                  className="accent-purple-500 w-4 h-4 cursor-pointer"
-                />
-              </div>
-
-              {/* System Awareness Status Card */}
               <div className="p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl space-y-2">
-                <span className="text-zinc-200 font-medium">System Telemetry</span>
-                <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] text-zinc-400">
-                  <div>Platform: {systemStatus?.platform || 'Linux'}</div>
-                  <div>Cores: {systemStatus?.cpuCount || '4'}</div>
+                <span className="text-zinc-300 font-medium">System Environment</span>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div>
-                    Memory: {systemStatus ? `${systemStatus.usedMemoryMb} / ${systemStatus.totalMemoryMb} MB` : 'Optimal'}
+                    <span className="text-zinc-500 block">Host / OS</span>
+                    <span className="text-zinc-200">{systemStatus?.hostname || 'Companion-Node'}</span>
                   </div>
-                  <div>Uptime: {systemStatus?.uptimeFormatted || 'Active'}</div>
+                  <div>
+                    <span className="text-zinc-500 block">Platform</span>
+                    <span className="text-zinc-200">{systemStatus?.platform || 'Linux Container'}</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block">Memory Usage</span>
+                    <span className="text-zinc-200">
+                      {systemStatus ? `${systemStatus.memoryUsagePercentage}%` : 'Normal'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block">Timezone</span>
+                    <span className="text-zinc-200">
+                      {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                    </span>
+                  </div>
                 </div>
-              </div>
-
-              <div className="p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl">
-                <span className="text-zinc-200 font-medium">Voice System Control</span>
-                <p className="text-zinc-400 text-[11px] mt-1">
-                  System tools operate completely hands-free via natural conversation (e.g. &quot;REVA, open Chrome&quot;,
-                  &quot;Set a 10 minute timer&quot;, &quot;What&apos;s my system status?&quot;).
-                </p>
               </div>
             </div>
           )}
 
           {activeSubTab === 'dev' && (
             <div className="space-y-2 text-zinc-400 text-[11px]">
+              {/* Voice Engine Diagnostics */}
+              <div className="p-3 bg-purple-950/40 rounded-xl border border-purple-800/60 space-y-1.5">
+                <div className="flex justify-between font-semibold text-purple-300 pb-1 border-b border-purple-900/60">
+                  <span>Voice System State Machine:</span>
+                  <span className="text-emerald-400">{machineState}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Current Mode:</span>
+                  <span className="text-purple-200 font-medium">{voiceMode}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Wake Word Detector:</span>
+                  <span
+                    className={
+                      wakeWordStatus === 'LISTENING'
+                        ? 'text-pink-300 font-medium animate-pulse'
+                        : wakeWordStatus === 'DETECTED'
+                        ? 'text-emerald-400 font-medium'
+                        : 'text-zinc-400'
+                    }
+                  >
+                    {wakeWordStatus}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Gemini Live WS:</span>
+                  <span className="text-cyan-300 font-medium">{diagnostics.geminiLiveState}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Audio In/Out:</span>
+                  <span className="text-purple-300">
+                    {diagnostics.audioInState} / {diagnostics.audioOutState}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Last Event:</span>
+                  <span className="text-purple-300 font-medium truncate max-w-[240px]">
+                    {diagnostics.lastEvent}
+                  </span>
+                </div>
+              </div>
+
               {/* Context Awareness Diagnostics */}
               <div className="p-3 bg-purple-950/40 rounded-xl border border-purple-800/60 space-y-1.5">
                 <div className="flex justify-between font-semibold text-purple-300 pb-1 border-b border-purple-900/60">
                   <span>Context Awareness Engine:</span>
-                  <span className={diagnostics.context?.awarenessStatus === 'ON' ? 'text-emerald-400' : 'text-amber-400'}>
-                    {diagnostics.context?.awarenessStatus || 'ON'}
+                  <span className={diagnostics.context?.contextAwarenessEnabled ? 'text-emerald-400' : 'text-amber-400'}>
+                    {diagnostics.context?.contextAwarenessEnabled ? 'ON' : 'OFF'}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -275,48 +377,11 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-400">Active Application:</span>
-                  <span className="text-zinc-200 font-medium truncate max-w-[240px]">
-                    {diagnostics.context?.activeApp || 'REVA Companion UI'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">User State:</span>
-                  <span className="text-cyan-300 font-medium">
-                    {diagnostics.context?.userState || 'ACTIVE_ENGAGEMENT'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-zinc-400">Memory Count:</span>
                   <span className="text-emerald-400 font-medium">
-                    {diagnostics.memoryCount ?? diagnostics.context?.memoryCount ?? 0} facts stored
+                    {diagnostics.memoryCount ?? 0} facts stored
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">Last Event:</span>
-                  <span className="text-purple-300 font-medium truncate max-w-[240px]">
-                    {diagnostics.context?.lastEvent || diagnostics.lastEvent}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-2 bg-black/40 rounded border border-purple-950 flex justify-between">
-                <span>Voice State:</span>
-                <span className="text-purple-300">{diagnostics.revaVoiceState}</span>
-              </div>
-              <div className="p-2 bg-black/40 rounded border border-purple-950 flex justify-between">
-                <span>Microphone:</span>
-                <span className="text-purple-300">{diagnostics.micState}</span>
-              </div>
-              <div className="p-2 bg-black/40 rounded border border-purple-950 flex justify-between">
-                <span>Audio In/Out:</span>
-                <span className="text-purple-300">
-                  {diagnostics.audioInState} / {diagnostics.audioOutState}
-                </span>
-              </div>
-              <div className="p-2 bg-black/40 rounded border border-purple-950 flex justify-between">
-                <span>Dominant Emotion:</span>
-                <span className="text-purple-300">{diagnostics.personality.dominantEmotion}</span>
               </div>
             </div>
           )}
