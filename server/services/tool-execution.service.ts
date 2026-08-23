@@ -16,6 +16,8 @@ import { ConfirmationService } from './confirmation.service.js';
 import { AllowedDirectoriesService } from './allowed-directories.service.js';
 import { ProjectShortcutService } from './project-shortcut.service.js';
 import { WebIntelligenceService } from './web-intelligence.service.js';
+import { ChromiumBrowserService } from './chromium-browser.service.js';
+import { BrowserCapabilityManager } from './browser-capability-manager.service.js';
 import {
   ToolPermissionLevel,
   ToolDefinition,
@@ -121,6 +123,15 @@ export class ToolExecutionService {
     this.proactiveService = ProactiveBehaviorService.getInstance();
     this.initDatabaseTables();
     this.loadPersistedTimersAndNotes();
+
+    // Wire up Chromium browser URL open listener
+    ChromiumBrowserService.getInstance().onUrlOpened((url) => {
+      this.onUrlOpenCallbacks.forEach((cb) => {
+        try {
+          cb(url);
+        } catch (_) {}
+      });
+    });
   }
 
   public static getInstance(): ToolExecutionService {
@@ -305,6 +316,21 @@ export class ToolExecutionService {
         },
       },
       {
+        name: 'navigate_chromium',
+        description: 'Navigate Chromium browser to a website URL or perform a search with real-time verification (e.g. "open YouTube", "open YouTube in Chromium", "go to github.com").',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            url: {
+              type: 'STRING',
+              description: 'The target website address, alias, or search query to navigate Chromium to (e.g. "https://www.youtube.com", "youtube", "github.com")',
+            },
+          },
+          required: ['url'],
+        },
+      },
+      {
         name: 'open_website',
         description: 'Open a verified web URL or search query in the browser (e.g. YouTube, GitHub, Documentation).',
         permission: 'REVERSIBLE',
@@ -317,6 +343,106 @@ export class ToolExecutionService {
             },
           },
           required: ['url'],
+        },
+      },
+      {
+        name: 'open_url_in_chromium',
+        description: 'Open a website URL or perform a search in Chromium browser (e.g. "open YouTube in Chromium", "search YouTube for lo-fi music").',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            url: {
+              type: 'STRING',
+              description: 'The website address, URL, or search command to execute in Chromium',
+            },
+          },
+          required: ['url'],
+        },
+      },
+      {
+        name: 'launch_chromium',
+        description: 'Launch or connect to the configured Chromium browser instance.',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            url: {
+              type: 'STRING',
+              description: 'Optional initial URL to navigate to upon launch',
+            },
+          },
+        },
+      },
+      {
+        name: 'list_browser_tabs',
+        description: 'List all currently open tabs in Chromium browser.',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {},
+        },
+      },
+      {
+        name: 'get_active_browser_tab',
+        description: 'Get details (title, URL) of the currently active tab in Chromium browser.',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {},
+        },
+      },
+      {
+        name: 'open_new_browser_tab',
+        description: 'Open a new tab in Chromium browser with an optional URL.',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            url: {
+              type: 'STRING',
+              description: 'Optional website URL to open in the new tab',
+            },
+          },
+        },
+      },
+      {
+        name: 'focus_browser_tab',
+        description: 'Switch to and focus a specific open tab in Chromium browser by tab ID.',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            tabId: {
+              type: 'STRING',
+              description: 'The ID of the browser tab to focus',
+            },
+          },
+          required: ['tabId'],
+        },
+      },
+      {
+        name: 'close_browser_tab',
+        description: 'Close a specific open tab in Chromium browser by tab ID.',
+        permission: 'REVERSIBLE',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            tabId: {
+              type: 'STRING',
+              description: 'The ID of the browser tab to close',
+            },
+          },
+          required: ['tabId'],
+        },
+      },
+      {
+        name: 'get_browser_page_info',
+        description: 'Retrieve safe basic page information (title, URL) of the current webpage in Chromium.',
+        permission: 'READ_ONLY',
+        parameters: {
+          type: 'OBJECT',
+          properties: {},
         },
       },
       {
@@ -926,8 +1052,38 @@ export class ToolExecutionService {
           executionResult = await this.executeSearchAndOpenWebsite(cleanArgs, startTime);
           break;
 
+        case 'navigate_chromium':
         case 'open_website':
-          executionResult = await this.executeOpenWebsite(cleanArgs, startTime);
+        case 'open_url_in_chromium':
+          executionResult = await this.executeNavigateChromium(cleanArgs, startTime, toolName);
+          break;
+
+        case 'launch_chromium':
+          executionResult = await this.executeLaunchChromium(cleanArgs, startTime);
+          break;
+
+        case 'list_browser_tabs':
+          executionResult = await this.executeListBrowserTabs(startTime);
+          break;
+
+        case 'get_active_browser_tab':
+          executionResult = await this.executeGetActiveBrowserTab(startTime);
+          break;
+
+        case 'open_new_browser_tab':
+          executionResult = await this.executeOpenNewBrowserTab(cleanArgs, startTime);
+          break;
+
+        case 'focus_browser_tab':
+          executionResult = await this.executeFocusBrowserTab(cleanArgs, startTime);
+          break;
+
+        case 'close_browser_tab':
+          executionResult = await this.executeCloseBrowserTab(cleanArgs, startTime);
+          break;
+
+        case 'get_browser_page_info':
+          executionResult = await this.executeGetBrowserPageInfo(startTime);
           break;
 
         case 'open_application':
@@ -1223,46 +1379,183 @@ export class ToolExecutionService {
   }
 
   /**
-   * 4. open_website
+   * 4. navigate_chromium, open_website & open_url_in_chromium
    */
-  private async executeOpenWebsite(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
-    const rawUrl = (args.url || args.website || args.query || '').trim();
-    const sysControl = SystemControlService.getInstance();
-    const webResult = await sysControl.openWebsite(rawUrl);
+  private async executeNavigateChromium(
+    args: Record<string, any>,
+    startTime: number,
+    toolName = 'navigate_chromium'
+  ): Promise<ToolExecutionResult> {
+    const rawUrl = (args.url || args.website || args.query || args.target || '').trim();
+    const capabilityManager = BrowserCapabilityManager.getInstance();
+    const browserResult = await capabilityManager.handleNavigationRequest(rawUrl);
 
-    if (!webResult.success) {
+    if (!browserResult.success) {
       return {
         success: false,
-        tool: 'open_website',
-        error: webResult.error || 'Failed to open website.',
+        tool: toolName,
+        error: browserResult.error || 'Failed to navigate Chromium.',
+        result: {
+          errorCode: browserResult.errorCode,
+          developerRequirement: browserResult.developerRequirement,
+          spokenSummary: browserResult.spokenSummary,
+        },
         executionTimeMs: Date.now() - startTime,
         timestamp: new Date().toISOString(),
         permissionLevel: 'REVERSIBLE',
       };
     }
 
-    // Broadcast URL to connected client frontend so the browser tab opens
-    if (webResult.url) {
-      this.onUrlOpenCallbacks.forEach((cb) => {
-        try {
-          cb(webResult.url!);
-        } catch (err) {
-          console.warn('[REVA][TOOLS] Error in onUrlOpen callback:', err);
-        }
-      });
-    }
-
     return {
       success: true,
-      tool: 'open_website',
+      tool: toolName,
       result: {
-        url: webResult.url,
-        opened: true,
-        spokenSummary: webResult.spokenSummary,
+        url: browserResult.url,
+        title: browserResult.title,
+        tabId: browserResult.tabId,
+        verified: true,
+        spokenSummary: browserResult.spokenSummary,
       },
       executionTimeMs: Date.now() - startTime,
       timestamp: new Date().toISOString(),
       permissionLevel: 'REVERSIBLE',
+    };
+  }
+
+  private async executeLaunchChromium(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const rawUrl = (args.url || args.website || '').trim();
+    const browserService = ChromiumBrowserService.getInstance();
+    const launchResult = await browserService.launchChromium(rawUrl || undefined);
+
+    return {
+      success: launchResult.success,
+      tool: 'launch_chromium',
+      result: {
+        url: launchResult.url,
+        spokenSummary: launchResult.spokenSummary,
+      },
+      error: launchResult.error,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'REVERSIBLE',
+    };
+  }
+
+  private async executeListBrowserTabs(startTime: number): Promise<ToolExecutionResult> {
+    const browserService = ChromiumBrowserService.getInstance();
+    const listResult = await browserService.listTabs();
+
+    return {
+      success: listResult.success,
+      tool: 'list_browser_tabs',
+      result: {
+        tabs: listResult.tabs,
+        tabCount: listResult.tabCount,
+        spokenSummary: listResult.spokenSummary,
+      },
+      error: listResult.error,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'READ_ONLY',
+    };
+  }
+
+  private async executeGetActiveBrowserTab(startTime: number): Promise<ToolExecutionResult> {
+    const browserService = ChromiumBrowserService.getInstance();
+    const tabResult = await browserService.getActiveTab();
+
+    return {
+      success: tabResult.success,
+      tool: 'get_active_browser_tab',
+      result: {
+        tabId: tabResult.tabId,
+        url: tabResult.url,
+        title: tabResult.title,
+        spokenSummary: tabResult.spokenSummary,
+      },
+      error: tabResult.error,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'READ_ONLY',
+    };
+  }
+
+  private async executeOpenNewBrowserTab(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const rawUrl = (args.url || args.website || '').trim();
+    const browserService = ChromiumBrowserService.getInstance();
+    const newTabResult = await browserService.openNewTab(rawUrl || undefined);
+
+    return {
+      success: newTabResult.success,
+      tool: 'open_new_browser_tab',
+      result: {
+        tabId: newTabResult.tabId,
+        url: newTabResult.url,
+        title: newTabResult.title,
+        spokenSummary: newTabResult.spokenSummary,
+      },
+      error: newTabResult.error,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'REVERSIBLE',
+    };
+  }
+
+  private async executeFocusBrowserTab(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const tabId = (args.tabId || args.id || '').trim();
+    const browserService = ChromiumBrowserService.getInstance();
+    const focusResult = await browserService.focusTab(tabId);
+
+    return {
+      success: focusResult.success,
+      tool: 'focus_browser_tab',
+      result: {
+        tabId,
+        spokenSummary: focusResult.spokenSummary,
+      },
+      error: focusResult.error,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'REVERSIBLE',
+    };
+  }
+
+  private async executeCloseBrowserTab(args: Record<string, any>, startTime: number): Promise<ToolExecutionResult> {
+    const tabId = (args.tabId || args.id || '').trim();
+    const browserService = ChromiumBrowserService.getInstance();
+    const closeResult = await browserService.closeTab(tabId);
+
+    return {
+      success: closeResult.success,
+      tool: 'close_browser_tab',
+      result: {
+        tabId,
+        spokenSummary: closeResult.spokenSummary,
+      },
+      error: closeResult.error,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'REVERSIBLE',
+    };
+  }
+
+  private async executeGetBrowserPageInfo(startTime: number): Promise<ToolExecutionResult> {
+    const browserService = ChromiumBrowserService.getInstance();
+    const infoResult = await browserService.getPageInfo();
+
+    return {
+      success: infoResult.success,
+      tool: 'get_browser_page_info',
+      result: {
+        title: infoResult.title,
+        url: infoResult.url,
+        tabId: infoResult.tabId,
+        spokenSummary: infoResult.spokenSummary,
+      },
+      error: infoResult.error,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      permissionLevel: 'READ_ONLY',
     };
   }
 

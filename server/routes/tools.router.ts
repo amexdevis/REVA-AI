@@ -6,10 +6,95 @@
 import { Router, Request, Response } from 'express';
 import { ToolExecutionService } from '../services/tool-execution.service.js';
 import { WebIntelligenceService } from '../services/web-intelligence.service.js';
+import { ChromiumBrowserService } from '../services/chromium-browser.service.js';
+import { BrowserCapabilityManager } from '../services/browser-capability-manager.service.js';
 
 export const toolsRouter = Router();
 const toolService = ToolExecutionService.getInstance();
 const webService = WebIntelligenceService.getInstance();
+const browserService = ChromiumBrowserService.getInstance();
+const browserCapabilityManager = BrowserCapabilityManager.getInstance();
+
+/**
+ * GET /api/tools/browser/diagnostics
+ * Get Chromium browser control diagnostics and capability state
+ */
+toolsRouter.get('/browser/diagnostics', (_req: Request, res: Response) => {
+  try {
+    const diagnostics = browserCapabilityManager.getDiagnostics();
+    res.json({
+      success: true,
+      diagnostics,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to get browser diagnostics' });
+  }
+});
+
+/**
+ * POST /api/tools/browser/navigate
+ * POST /api/tools/browser/open
+ * Navigate to a URL in Chromium with real verification through capability manager
+ */
+toolsRouter.post('/browser/navigate', async (req: Request, res: Response) => {
+  try {
+    const { url } = req.body;
+    const result = await browserCapabilityManager.handleNavigationRequest(url);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to navigate in browser' });
+  }
+});
+
+toolsRouter.post('/browser/open', async (req: Request, res: Response) => {
+  try {
+    const { url } = req.body;
+    const result = await browserCapabilityManager.handleNavigationRequest(url);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to open URL in browser' });
+  }
+});
+
+/**
+ * POST /api/tools/browser/launch
+ * Launch or reuse Chromium
+ */
+toolsRouter.post('/browser/launch', async (req: Request, res: Response) => {
+  try {
+    const { url } = req.body;
+    const result = await browserService.launchChromium(url);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to launch Chromium' });
+  }
+});
+
+/**
+ * GET /api/tools/browser/tabs
+ * List open tabs in Chromium
+ */
+toolsRouter.get('/browser/tabs', async (_req: Request, res: Response) => {
+  try {
+    const result = await browserService.listTabs();
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to list browser tabs' });
+  }
+});
+
+/**
+ * GET /api/tools/browser/active-tab
+ * Get active tab in Chromium
+ */
+toolsRouter.get('/browser/active-tab', async (_req: Request, res: Response) => {
+  try {
+    const result = await browserService.getActiveTab();
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to get active browser tab' });
+  }
+});
 
 /**
  * GET /api/tools/web/status

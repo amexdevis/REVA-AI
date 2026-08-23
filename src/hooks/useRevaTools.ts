@@ -12,6 +12,12 @@ import {
   TimerItem,
 } from '../types/voice.types.js';
 
+export interface RevaNotification {
+  id: string;
+  type: 'timer' | 'system';
+  message: string;
+}
+
 export function useRevaTools() {
   const [tools, setTools] = useState<ToolDefinition[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemStatusData | null>(null);
@@ -19,7 +25,7 @@ export function useRevaTools() {
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [timers, setTimers] = useState<TimerItem[]>([]);
   const [clipboardText, setClipboardText] = useState<string>('');
-  const [activeNotification, setActiveNotification] = useState<string | null>(null);
+  const [activeNotification, setActiveNotification] = useState<RevaNotification | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -192,7 +198,11 @@ export function useRevaTools() {
   }, [fetchNotes, fetchTimers, fetchStatus]);
 
   const handleTimerRing = useCallback((timer: TimerItem) => {
-    setActiveNotification(`Timer alert: "${timer.label}" has finished!`);
+    setActiveNotification({
+      id: 'timer-' + Date.now(),
+      type: 'timer',
+      message: `Timer alert: "${timer.label}" has finished!`,
+    });
     fetchTimers();
   }, [fetchTimers]);
 
@@ -200,8 +210,8 @@ export function useRevaTools() {
     setClipboardText(text);
   }, []);
 
-  const handleOpenUrl = useCallback((url: string) => {
-    setActiveNotification(`URL Requested: ${url}`);
+  const handleOpenUrl = useCallback((_url: string) => {
+    // No artificial popup
   }, []);
 
   return {

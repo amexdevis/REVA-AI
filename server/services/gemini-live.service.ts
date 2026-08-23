@@ -231,17 +231,123 @@ export class GeminiLiveService {
                   },
                 },
                 {
-                  name: 'open_website',
-                  description: 'Open a verified web URL in the browser (e.g. YouTube, GitHub, Google, docs).',
+                  name: 'navigate_chromium',
+                  description: 'Navigate Chromium browser to a website URL or perform a search with real-time verification (e.g. "open YouTube", "open YouTube in Chromium", "go to github.com").',
                   parameters: {
                     type: Type.OBJECT,
                     properties: {
                       url: {
                         type: Type.STRING,
-                        description: 'The website URL to open (e.g. "https://youtube.com" or "github.com")',
+                        description: 'The website address, URL, alias, or search query to navigate Chromium to (e.g. "https://www.youtube.com", "youtube", "github.com")',
                       },
                     },
                     required: ['url'],
+                  },
+                },
+                {
+                  name: 'open_website',
+                  description: 'Open a verified web URL or website in the browser (e.g. "open YouTube", "open GitHub", "go to Google"). Controls Chromium directly.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      url: {
+                        type: Type.STRING,
+                        description: 'The website URL, alias, or search command (e.g. "https://youtube.com", "youtube", "github.com")',
+                      },
+                    },
+                    required: ['url'],
+                  },
+                },
+                {
+                  name: 'open_url_in_chromium',
+                  description: 'Open a website or run a search in Chromium browser (e.g. "open YouTube in Chromium", "search YouTube for lo-fi music").',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      url: {
+                        type: Type.STRING,
+                        description: 'The website address, URL, or search query to open in Chromium',
+                      },
+                    },
+                    required: ['url'],
+                  },
+                },
+                {
+                  name: 'launch_chromium',
+                  description: 'Launch or connect to the configured Chromium browser instance.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      url: {
+                        type: Type.STRING,
+                        description: 'Optional initial URL to navigate to upon launch',
+                      },
+                    },
+                  },
+                },
+                {
+                  name: 'list_browser_tabs',
+                  description: 'List all currently open tabs in Chromium browser.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
+                  },
+                },
+                {
+                  name: 'get_active_browser_tab',
+                  description: 'Get the title and URL of the active tab in Chromium browser.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
+                  },
+                },
+                {
+                  name: 'open_new_browser_tab',
+                  description: 'Open a new tab in Chromium browser with an optional URL.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      url: {
+                        type: Type.STRING,
+                        description: 'Optional website URL to open in the new tab',
+                      },
+                    },
+                  },
+                },
+                {
+                  name: 'focus_browser_tab',
+                  description: 'Switch to and focus a specific open tab in Chromium browser by tab ID.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      tabId: {
+                        type: Type.STRING,
+                        description: 'The ID of the browser tab to focus',
+                      },
+                    },
+                    required: ['tabId'],
+                  },
+                },
+                {
+                  name: 'close_browser_tab',
+                  description: 'Close a specific open tab in Chromium browser by tab ID.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      tabId: {
+                        type: Type.STRING,
+                        description: 'The ID of the browser tab to close',
+                      },
+                    },
+                    required: ['tabId'],
+                  },
+                },
+                {
+                  name: 'get_browser_page_info',
+                  description: 'Retrieve safe basic page information (title, URL) of the current webpage in Chromium.',
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
                   },
                 },
                 {

@@ -8,6 +8,7 @@ import { useRevaVoice } from '../hooks/useRevaVoice.js';
 import { useRevaMemory } from '../hooks/useRevaMemory.js';
 import { useRevaTools } from '../hooks/useRevaTools.js';
 import { useRevaProactive } from '../hooks/useRevaProactive.js';
+import { useRevaMusic } from '../hooks/useRevaMusic.js';
 import { AmbientParticles } from '../components/AmbientParticles.js';
 import { HolographicPlatform } from '../components/HolographicPlatform.js';
 import { RevaCharacter } from '../components/RevaCharacter.js';
@@ -86,6 +87,18 @@ export const LandingPage: React.FC = () => {
     onProactiveTrigger: (type, context) => {
       sendProactiveEvent(type, context);
     },
+  });
+
+  const {
+    musicSettings,
+    toggleMusic,
+    setMusicMode,
+    setMusicVolume,
+  } = useRevaMusic({
+    sessionState,
+    machineState,
+    revaAudioLevel,
+    userAudioLevel,
   });
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -218,14 +231,14 @@ export const LandingPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Floating System Voice Notification */}
+      {/* Floating System Alert Notification (e.g. Timer Alerts) */}
       {activeNotification && (
-        <div className="absolute top-16 sm:top-20 left-1/2 -translate-x-1/2 z-40 px-4 py-2 bg-[#1b0638]/95 border border-purple-400/70 rounded-full shadow-[0_0_25px_rgba(168,85,247,0.6)] flex items-center gap-3 text-xs font-sans text-purple-100 animate-bounce">
-          <Bell className="w-4 h-4 text-purple-300 animate-spin" />
-          <span>{activeNotification}</span>
+        <div className="absolute top-16 sm:top-20 left-1/2 -translate-x-1/2 z-40 px-4 py-2 bg-[#17052e]/95 border border-purple-400/80 rounded-full shadow-[0_0_30px_rgba(168,85,247,0.5)] flex items-center gap-3 text-xs font-sans text-purple-100 max-w-[90vw] transition-all">
+          <Bell className="w-4 h-4 text-purple-300 animate-bounce shrink-0" />
+          <span>{activeNotification.message}</span>
           <button
             onClick={dismissNotification}
-            className="px-2.5 py-0.5 bg-purple-700 hover:bg-purple-600 rounded-full text-purple-100 cursor-pointer text-[10px]"
+            className="px-2.5 py-0.5 bg-purple-700 hover:bg-purple-600 rounded-full text-purple-100 cursor-pointer text-[10px] shrink-0"
           >
             OK
           </button>
@@ -336,6 +349,10 @@ export const LandingPage: React.FC = () => {
         }}
         onUpdateContextSettings={sendContextSettingsUpdate}
         onTestGreeting={testGreeting}
+        musicSettings={musicSettings}
+        onToggleMusic={toggleMusic}
+        onSelectMusicMode={setMusicMode}
+        onSetMusicVolume={setMusicVolume}
       />
 
       {/* Memory Modal Overlay */}
