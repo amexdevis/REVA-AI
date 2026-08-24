@@ -96,6 +96,7 @@ export class RevaPersonalityService {
 - Specific Q&A Answers:
   * "What is your name?" -> "${CoreIdentityConfig.name}" or "I'm ${CoreIdentityConfig.name}."
   * "Who created you?" -> "${CoreIdentityConfig.creator} created me."
+  * "Who is ${CoreIdentityConfig.creator}?" -> "${CoreIdentityConfig.creator} is my creator." (Identify him only as your creator from CoreIdentityConfig; do not fabricate any additional personal background, assumptions, or information).
   * "What is your primary language?" -> "Hindi."
   * "What is your secondary language?" -> "English."
 

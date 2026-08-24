@@ -15,6 +15,7 @@ import {
 } from '../types/voice.types.js';
 import { BackgroundMusicSettings, AmbientMusicMode } from '../lib/audio/background-music-manager.js';
 import { VoiceModeSelector } from './VoiceModeSelector.js';
+import { CoreIdentityConfig } from '../config/core-identity.config.js';
 
 interface RevaSettingsModalProps {
   isOpen: boolean;
@@ -191,6 +192,22 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
         <div className="p-6 max-h-[65vh] overflow-y-auto space-y-4 text-xs font-mono">
           {activeSubTab === 'general' && (
             <div className="space-y-4">
+              {/* Core Identity & Creator */}
+              <div className="p-3.5 bg-gradient-to-r from-purple-950/60 to-[#1b0833] border border-purple-800/70 rounded-xl flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold tracking-[0.18em] text-purple-100">
+                    {CoreIdentityConfig.name}
+                  </div>
+                  <div className="text-[10px] font-mono text-purple-300/70 tracking-[0.25em] uppercase mt-0.5">
+                    AI COMPANION
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-purple-400/70 font-mono tracking-wider block">Created by</span>
+                  <span className="text-xs font-medium text-purple-100 tracking-wide">{CoreIdentityConfig.creator}</span>
+                </div>
+              </div>
+
               {/* Step 9 Voice Mode Control Section */}
               <div className="p-3.5 bg-gradient-to-br from-purple-950/40 to-[#18082e] border border-purple-800/60 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">

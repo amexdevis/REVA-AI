@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { Mic, MicOff, Volume2, Radio, Sparkles, ShieldAlert } from 'lucide-react';
+import { Mic, MicOff, Volume2, Sparkles, ShieldAlert } from 'lucide-react';
 import {
   VoiceSessionState,
   VoiceMode,
@@ -53,7 +53,6 @@ export const MicrophoneControl: React.FC<MicrophoneControlProps> = ({
 
   const handleClick = () => {
     if (isVoiceOff) {
-      // Prompt / switch to Manual mode
       onSelectMode?.('MANUAL');
       onStartSession();
     } else if (isDenied) {
@@ -63,7 +62,6 @@ export const MicrophoneControl: React.FC<MicrophoneControlProps> = ({
     } else if (isSpeaking) {
       onInterrupt();
     } else if (isWakeListening) {
-      // Manual immediate trigger in hands-free mode
       onStartSession();
     } else {
       onToggleMute();
@@ -80,160 +78,69 @@ export const MicrophoneControl: React.FC<MicrophoneControlProps> = ({
     if (isMuted) return 'Muted';
     if (isWakeListening) return 'Listening for "Hey REVA"';
     if (sessionState === 'ERROR' || machineState === 'ERROR') return 'Voice Error';
-    if (isOffline) return 'Ready (Click to talk)';
-    return 'Ready';
+    if (isOffline) return 'Listening...';
+    return 'Listening...';
   }, [isDenied, isVoiceOff, isConnecting, isSpeaking, isListening, isMuted, isWakeListening, sessionState, machineState, isOffline]);
 
-  // Generate 44 circular frequency dial tick marks around the ring
-  const tickCount = 44;
-  const ticks = useMemo(() => {
-    return Array.from({ length: tickCount }, (_, i) => {
-      const angle = (i / tickCount) * 360;
-      return { id: i, angle };
+  // Audio equalizer bars matching reference image: 26 centered horizontal bars
+  const barCount = 26;
+  const bars = useMemo(() => {
+    return Array.from({ length: barCount }, (_, i) => {
+      const distFromCenter = Math.abs(i - barCount / 2) / (barCount / 2);
+      const curve = Math.exp(-distFromCenter * distFromCenter * 3.5);
+      return { id: i, curve };
     });
-  }, [tickCount]);
+  }, [barCount]);
 
   return (
     <div
       id="reva-right-mic-control"
       className="flex flex-col items-center justify-center select-none z-20"
     >
-      {/* Outer Holographic Container */}
-      <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center">
-        {/* Outermost Pulsing Ambient Glow */}
+      {/* Outer Holographic Glass Rings Container */}
+      <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 flex items-center justify-center">
+        {/* Outermost Precision Ring */}
         <div
-          className="absolute inset-0 rounded-full transition-all duration-100 ease-out pointer-events-none"
+          className="absolute inset-0 rounded-full border border-purple-500/20 transition-all duration-300 pointer-events-none"
           style={{
-            transform: `scale(${1 + (isVoiceOff ? 0 : audioLevel * 0.35)})`,
-            backgroundColor: isVoiceOff
-              ? 'rgba(75, 85, 99, 0.08)'
-              : isDenied || isMuted
-              ? 'rgba(244, 63, 94, 0.15)'
-              : isWakeListening
-              ? 'rgba(236, 72, 153, 0.18)'
-              : isSpeaking
-              ? 'rgba(192, 132, 252, 0.22)'
-              : isListening
-              ? 'rgba(168, 85, 247, 0.25)'
-              : 'rgba(147, 51, 234, 0.1)',
+            transform: `scale(${1 + (isVoiceOff ? 0 : audioLevel * 0.08)})`,
             boxShadow: isVoiceOff
               ? 'none'
-              : isDenied || isMuted
-              ? '0 0 20px rgba(244, 63, 94, 0.3)'
-              : isWakeListening
-              ? '0 0 25px rgba(236, 72, 153, 0.4)'
-              : audioLevel > 0.05
-              ? `0 0 ${25 + audioLevel * 35}px rgba(216, 180, 254, 0.6)`
-              : '0 0 15px rgba(168, 85, 247, 0.3)',
+              : `0 0 ${10 + audioLevel * 14}px rgba(168, 85, 247, ${0.15 + audioLevel * 0.2})`,
           }}
         />
 
-        {/* Outer Circular Equalizer Ticks (rotating slowly) */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-holo-cw">
-          {ticks.map((tick) => {
-            const tickAudioFactor = Math.sin(tick.id * 0.5 + audioLevel * 5) * 0.5 + 0.5;
-            const tickHeight = isVoiceOff
-              ? 2
-              : isWakeListening
-              ? 3 + Math.sin(tick.id * 0.3) * 2
-              : 3.5 + tickAudioFactor * (3.5 + audioLevel * 9);
-
-            return (
-              <div
-                key={tick.id}
-                className="absolute origin-bottom transition-all duration-75"
-                style={{
-                  transform: `rotate(${tick.angle}deg) translateY(-58px)`,
-                  width: '1.5px',
-                  height: `${tickHeight}px`,
-                  backgroundColor: isVoiceOff
-                    ? '#52525b'
-                    : isDenied || isMuted
-                    ? '#fb7185'
-                    : isWakeListening
-                    ? '#f472b6'
-                    : isListening || isSpeaking
-                    ? '#d8b4fe'
-                    : '#7e22ce',
-                  opacity: isVoiceOff ? 0.2 : isDenied ? 0.4 : isMuted ? 0.6 : 0.4 + tickAudioFactor * 0.6,
-                }}
-              />
-            );
-          })}
-        </div>
-
-        {/* Concentric Rotating Tech Ring 1 */}
+        {/* Middle Vibrant Purple Ring with Neon Glow */}
         <div
-          className={`absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full border border-dashed animate-holo-ccw pointer-events-none ${
-            isVoiceOff
-              ? 'border-zinc-700/40'
-              : isDenied || isMuted
-              ? 'border-rose-400/50'
-              : isWakeListening
-              ? 'border-pink-400/60'
-              : 'border-purple-400/50'
-          }`}
+          className="absolute w-24 h-24 sm:w-26 sm:h-26 md:w-28 md:h-28 rounded-full border border-purple-400/70 transition-all duration-200 pointer-events-none shadow-[0_0_12px_rgba(192,132,252,0.45)]"
           style={{
-            boxShadow: isVoiceOff
-              ? 'none'
-              : `0 0 ${10 + audioLevel * 18}px ${
-                  isDenied || isMuted
-                    ? 'rgba(251, 113, 133, 0.3)'
-                    : isWakeListening
-                    ? 'rgba(244, 114, 182, 0.4)'
-                    : 'rgba(192, 132, 252, 0.4)'
-                }`,
+            transform: `scale(${1 + (isVoiceOff ? 0 : audioLevel * 0.06)})`,
           }}
         />
 
-        {/* Concentric Tech Ring 2 */}
+        {/* Inner Subtle Glass Ring */}
         <div
-          className={`absolute w-20 h-20 sm:w-24 sm:h-24 rounded-full border pointer-events-none ${
-            isVoiceOff
-              ? 'border-zinc-800/40'
-              : isDenied || isMuted
-              ? 'border-rose-400/30'
-              : isWakeListening
-              ? 'border-pink-300/40'
-              : 'border-purple-300/40'
-          }`}
+          className="absolute w-18 h-18 sm:w-20 sm:h-20 md:w-22 md:h-22 rounded-full border border-purple-300/30 transition-all duration-150 pointer-events-none"
+          style={{
+            boxShadow: isVoiceOff
+              ? 'none'
+              : `0 0 8px rgba(216, 180, 254, ${0.2 + audioLevel * 0.2})`,
+          }}
         />
 
-        {/* Main Central Interactive Microphone Button */}
+        {/* Center Microphone Button: Transparent Holographic Orb */}
         <button
           id="reva-circular-mic-button"
           onClick={handleClick}
-          title={
+          title="Microphone (Click to talk or mute)"
+          className={`relative z-10 w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 active:scale-95 bg-transparent ${
             isVoiceOff
-              ? 'Voice is OFF. Click to enable Manual Voice.'
-              : isDenied
-              ? 'Microphone permission required. Click to request.'
+              ? 'text-zinc-500 border border-zinc-700/30 hover:text-zinc-300'
+              : isDenied || isMuted
+              ? 'text-rose-300 border border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.3)]'
               : isWakeListening
-              ? 'Hands-Free listening for "Hey REVA". Click to talk manually.'
-              : isOffline
-              ? 'Click to start Manual Voice conversation'
-              : isSpeaking
-              ? 'Interrupt REVA'
-              : isMuted
-              ? 'Unmute Microphone'
-              : 'Mute Microphone'
-          }
-          className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 shadow-2xl active:scale-95 ${
-            isVoiceOff
-              ? 'bg-[#18181b] text-zinc-500 border border-zinc-700/50 hover:text-zinc-300 hover:border-zinc-500'
-              : isDenied
-              ? 'bg-[#2a0814] text-rose-400 border border-rose-500/70 shadow-[0_0_20px_rgba(244,63,94,0.4)]'
-              : isMuted
-              ? 'bg-[#2a0814] text-rose-300 border border-rose-500/70 shadow-[0_0_20px_rgba(244,63,94,0.4)]'
-              : isWakeListening
-              ? 'bg-gradient-to-br from-[#2e0840] to-[#1c0836] text-pink-200 border border-pink-400/70 shadow-[0_0_25px_rgba(236,72,153,0.5)]'
-              : isOffline
-              ? 'bg-[#150728] text-purple-400/70 border border-purple-800/40 hover:text-purple-200 hover:border-purple-500'
-              : isSpeaking
-              ? 'bg-[#2e0854] text-purple-100 border border-purple-300 shadow-[0_0_28px_rgba(216,180,254,0.7)]'
-              : isListening
-              ? 'bg-[#25084a] text-purple-100 border border-purple-300/90 shadow-[0_0_25px_rgba(192,132,252,0.6)]'
-              : 'bg-[#1c0836] text-purple-200 border border-purple-500/60 hover:border-purple-300'
+              ? 'text-pink-200 border border-pink-400/50 shadow-[0_0_15px_rgba(236,72,153,0.35)]'
+              : 'text-purple-100 border border-purple-400/50 shadow-[0_0_16px_rgba(168,85,247,0.35)] hover:border-purple-300 hover:shadow-[0_0_20px_rgba(192,132,252,0.5)]'
           }`}
         >
           {isVoiceOff ? (
@@ -242,36 +149,50 @@ export const MicrophoneControl: React.FC<MicrophoneControlProps> = ({
             <ShieldAlert className="w-5 h-5 sm:w-6 sm:h-6 text-rose-400 animate-pulse" />
           ) : isMuted ? (
             <MicOff className="w-5 h-5 sm:w-6 sm:h-6 text-rose-300" />
-          ) : isWakeListening ? (
-            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-pink-300 animate-pulse drop-shadow-[0_0_8px_rgba(244,114,182,0.8)]" />
-          ) : isOffline ? (
-            <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-purple-300/80" />
           ) : isSpeaking ? (
-            <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse text-purple-200" />
+            <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-100 drop-shadow-[0_0_8px_rgba(216,180,254,0.9)]" />
           ) : isConnecting ? (
             <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-purple-300" />
           ) : (
-            <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-purple-100 drop-shadow-[0_0_8px_rgba(216,180,254,0.8)]" />
+            <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-purple-100 drop-shadow-[0_0_8px_rgba(216,180,254,0.9)]" />
           )}
         </button>
       </div>
 
       {/* State Label Below the Microphone */}
-      <span
-        className={`mt-2.5 text-xs sm:text-sm font-sans tracking-wide text-center px-2 max-w-[200px] truncate ${
-          isVoiceOff
-            ? 'text-zinc-500'
-            : isDenied
-            ? 'text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)] font-medium'
-            : isMuted
-            ? 'text-rose-300 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]'
-            : isWakeListening
-            ? 'text-pink-200 drop-shadow-[0_0_10px_rgba(244,114,182,0.6)] font-medium animate-pulse'
-            : 'text-purple-200/90 drop-shadow-[0_0_10px_rgba(192,132,252,0.5)]'
-        }`}
-      >
+      <span className="mt-3 text-xs font-normal text-purple-200/90 tracking-wide text-center drop-shadow-[0_0_8px_rgba(192,132,252,0.5)]">
         {stateLabel}
       </span>
+
+      {/* Equalizer waveform centered below text */}
+      <div className="flex items-center gap-[2px] sm:gap-[2.5px] h-5 mt-2.5 px-3">
+        {bars.map((bar) => {
+          const baseHeight = 2.5;
+          const dynamicHeight = Math.max(
+            baseHeight,
+            baseHeight + bar.curve * (7 + audioLevel * 16) * (0.85 + Math.sin(bar.id * 1.5) * 0.15)
+          );
+
+          return (
+            <div
+              key={bar.id}
+              className="w-[2.5px] rounded-full transition-all duration-75"
+              style={{
+                height: `${dynamicHeight}px`,
+                backgroundColor: isSpeaking
+                  ? '#f3e8ff'
+                  : isListening
+                  ? '#d8b4fe'
+                  : '#c084fc',
+                boxShadow:
+                  audioLevel > 0.05
+                    ? `0 0 6px rgba(216, 180, 254, ${0.4 + audioLevel * 0.6})`
+                    : '0 0 3px rgba(192, 132, 252, 0.3)',
+              }}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 };

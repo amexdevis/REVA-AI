@@ -21,7 +21,8 @@ import { VoiceModeSelector } from '../components/VoiceModeSelector.js';
 import { SettingsButton } from '../components/SettingsButton.js';
 import { RevaSettingsModal } from '../components/RevaSettingsModal.js';
 import { RevaMemoryModal } from '../components/RevaMemoryModal.js';
-import { Bell } from 'lucide-react';
+import { Bell, Globe, FileText, CheckSquare, Box } from 'lucide-react';
+import { CoreIdentityConfig } from '../config/core-identity.config.js';
 
 export const LandingPage: React.FC = () => {
   const {
@@ -103,9 +104,10 @@ export const LandingPage: React.FC = () => {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMemoryOpen, setIsMemoryOpen] = useState(false);
+  const [activeDockTab, setActiveDockTab] = useState<'web' | 'notes' | 'tasks' | 'system'>('web');
   const hasTriggeredAppOpenRef = useRef(false);
 
-  // Trigger natural app opening interaction (Step 10 Requirement 1 & 10)
+  // Trigger natural app opening interaction
   useEffect(() => {
     if (!hasTriggeredAppOpenRef.current && sessionState === 'READY' && voiceMode !== 'OFF') {
       hasTriggeredAppOpenRef.current = true;
@@ -120,8 +122,8 @@ export const LandingPage: React.FC = () => {
   }, [sessionState, voiceMode, triggerProactiveEvent]);
 
   // Live time and date
-  const [timeString, setTimeString] = useState<string>('10:42 PM');
-  const [dateString, setDateString] = useState<string>('Friday, 16 May 2025');
+  const [timeString, setTimeString] = useState<string>('09:41 PM');
+  const [dateString, setDateString] = useState<string>('May 17, Fri');
 
   useEffect(() => {
     const updateClock = () => {
@@ -131,10 +133,9 @@ export const LandingPage: React.FC = () => {
       );
       setDateString(
         now.toLocaleDateString('en-US', {
-          weekday: 'long',
-          day: 'numeric',
           month: 'short',
-          year: 'numeric',
+          day: 'numeric',
+          weekday: 'short',
         })
       );
     };
@@ -188,7 +189,7 @@ export const LandingPage: React.FC = () => {
   return (
     <div
       id="reva-companion-viewport"
-      className="relative w-screen h-screen min-h-screen bg-[#030107] text-zinc-100 overflow-hidden select-none font-sans flex flex-col justify-between"
+      className="relative w-screen h-screen min-h-screen bg-[#000000] text-zinc-100 overflow-hidden select-none font-sans flex flex-col justify-between"
     >
       {/* 1. Atmospheric Glows & Moving Particles */}
       <AmbientParticles
@@ -199,35 +200,57 @@ export const LandingPage: React.FC = () => {
       />
 
       {/* 2. Top Header HUD */}
-      <header className="relative z-30 w-full px-6 sm:px-10 pt-4 sm:pt-6 flex items-center justify-between">
+      <header className="relative z-30 w-full px-8 lg:px-12 pt-6 flex items-center justify-between">
         {/* Top-Left: REVA AI COMPANION */}
-        <div className="flex-1 flex flex-col items-start select-none">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extralight tracking-[0.18em] text-transparent bg-clip-text bg-gradient-to-r from-purple-100 via-purple-200 to-pink-200 drop-shadow-[0_0_18px_rgba(216,180,254,0.7)]">
-            REVA
-          </h1>
-          <span className="text-[10px] sm:text-xs font-mono text-purple-300/70 tracking-[0.3em] uppercase mt-0.5">
-            AI COMPANION
-          </span>
-        </div>
-
-        {/* Top-Right: Status, Live Clock & Settings */}
-        <div className="flex-1 flex items-center justify-end gap-3 sm:gap-4">
-          <RevaStatus
-            sessionState={sessionState}
-            voiceMode={voiceMode}
-            machineState={machineState}
-          />
-
-          <div className="hidden lg:flex flex-col items-end text-right font-sans">
-            <span className="text-sm sm:text-base md:text-lg text-purple-100 font-medium tracking-wide drop-shadow-[0_0_8px_rgba(216,180,254,0.4)]">
-              {timeString}
-            </span>
-            <span className="text-[11px] sm:text-xs text-purple-400/60 tracking-wider">
-              {dateString}
+        <div className="flex flex-col items-start select-none">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-300 shadow-[0_0_12px_#d8b4fe]" />
+            <h1 className="text-3xl lg:text-4xl font-normal tracking-[0.28em] text-white drop-shadow-[0_0_20px_rgba(216,180,254,0.6)]">
+              {CoreIdentityConfig.name}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 mt-1.5 pl-4 border-l-2 border-purple-500/50">
+            <span className="text-[11px] font-sans text-purple-300/80 tracking-[0.32em] uppercase font-light">
+              AI COMPANION
             </span>
           </div>
+        </div>
 
-          <SettingsButton onClick={() => setIsSettingsOpen(true)} />
+        {/* Top-Center: Voice Mode Selector (Manual, Hands-Free, Off) */}
+        <div className="flex justify-center">
+          <VoiceModeSelector
+            voiceMode={voiceMode}
+            machineState={machineState}
+            wakeWordStatus={wakeWordStatus}
+            isWakeWordSupported={isWakeWordSupported}
+            onSelectMode={setVoiceMode}
+          />
+        </div>
+
+        {/* Top-Right: Unified Status Pill (Status, Time/Date, Settings) */}
+        <div className="flex items-center justify-end">
+          <div className="flex items-center gap-4 px-5 py-2.5 rounded-full bg-[#0a0316]/80 border border-purple-900/60 backdrop-blur-2xl shadow-[0_0_25px_rgba(107,33,168,0.25)]">
+            <RevaStatus
+              sessionState={sessionState}
+              voiceMode={voiceMode}
+              machineState={machineState}
+            />
+
+            <div className="h-5 w-[1px] bg-purple-800/50" />
+
+            <div className="flex flex-col items-end text-right font-sans leading-tight">
+              <span className="text-xs font-normal text-purple-100 tracking-wide">
+                {timeString}
+              </span>
+              <span className="text-[10px] text-purple-300/70 tracking-wider">
+                {dateString}
+              </span>
+            </div>
+
+            <div className="h-5 w-[1px] bg-purple-800/50" />
+
+            <SettingsButton onClick={() => setIsSettingsOpen(true)} />
+          </div>
         </div>
       </header>
 
@@ -246,9 +269,10 @@ export const LandingPage: React.FC = () => {
       )}
 
       {/* 3. Main Central Viewport: Centered Full-Body Anime REVA Standing on Holographic Platform */}
-      <main className="relative z-10 flex-1 w-full h-full flex items-center justify-between px-6 sm:px-10 md:px-14 pointer-events-none">
-        {/* Left Section: Equalizer Waveform, Dialogue & Subtitle */}
-        <div className="pointer-events-auto z-20 flex justify-start pl-2">
+      <main className="relative z-10 flex-1 w-full h-full flex items-center justify-between px-6 sm:px-10 md:px-14 pointer-events-none pb-4">
+        {/* Left Section: Dialogue Card + Memory/Mood Indicator Cards Stack */}
+        <div className="pointer-events-auto z-20 flex flex-col items-start gap-4 pl-0 -ml-2 sm:-ml-4 md:-ml-6 py-2">
+          {/* Top: Dialogue & Waveform Card */}
           <AudioVisualizer
             sessionState={sessionState}
             userAudioLevel={userAudioLevel}
@@ -256,10 +280,18 @@ export const LandingPage: React.FC = () => {
             transcripts={transcripts}
             userName={userProfile?.name || 'Master'}
           />
+
+          {/* Bottom Left: Memory Card */}
+          <div className="flex flex-col gap-3 w-full">
+            <MemoryIndicator
+              memoryCount={memories.length}
+              onClick={() => setIsMemoryOpen(true)}
+            />
+          </div>
         </div>
 
         {/* Center: Large Full-Body REVA Character with Holographic Pedestal at her feet */}
-        <div className="pointer-events-auto absolute left-1/2 -translate-x-1/2 bottom-[8%] sm:bottom-[9%] md:bottom-[10%] flex flex-col items-center justify-end z-10">
+        <div className="pointer-events-auto absolute left-1/2 -translate-x-1/2 bottom-[5%] sm:bottom-[6%] md:bottom-[7%] flex flex-col items-center justify-end z-10">
           <HolographicPlatform
             sessionState={sessionState}
             userAudioLevel={userAudioLevel}
@@ -284,51 +316,32 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* Right Section: Large Circular Holographic Microphone Control */}
-        <div className="pointer-events-auto z-20 flex justify-end pr-2">
-          <MicrophoneControl
-            sessionState={sessionState}
-            micState={micState}
-            voiceMode={voiceMode}
-            machineState={machineState}
-            wakeWordStatus={wakeWordStatus}
-            userAudioLevel={userAudioLevel}
-            revaAudioLevel={revaAudioLevel}
-            onToggleMute={toggleMute}
-            onStartSession={startVoiceSession}
-            onInterrupt={handleInterrupt}
-            onSelectMode={setVoiceMode}
-          />
+        <div className="pointer-events-auto z-20 flex flex-col items-end justify-center h-full py-6 pr-2 translate-y-10 sm:translate-y-14">
+          {/* Centered Large Circular Holographic Microphone */}
+          <div className="flex items-center justify-center">
+            <MicrophoneControl
+              sessionState={sessionState}
+              micState={micState}
+              voiceMode={voiceMode}
+              machineState={machineState}
+              wakeWordStatus={wakeWordStatus}
+              userAudioLevel={userAudioLevel}
+              revaAudioLevel={revaAudioLevel}
+              onToggleMute={toggleMute}
+              onStartSession={startVoiceSession}
+              onInterrupt={handleInterrupt}
+              onSelectMode={setVoiceMode}
+            />
+          </div>
         </div>
       </main>
 
-      {/* 4. Bottom Footer HUD */}
-      <footer className="relative z-30 w-full px-6 sm:px-10 pb-4 sm:pb-6 flex items-center justify-between">
-        {/* Bottom-Left: Memory Indicator Card */}
-        <div className="flex-1 flex justify-start">
-          <MemoryIndicator
-            memoryCount={memories.length}
-            onClick={() => setIsMemoryOpen(true)}
-          />
-        </div>
-
-        {/* Bottom-Center: Voice Mode Selector */}
-        <div className="flex-1 flex justify-center text-center">
-          <VoiceModeSelector
-            voiceMode={voiceMode}
-            machineState={machineState}
-            wakeWordStatus={wakeWordStatus}
-            isWakeWordSupported={isWakeWordSupported}
-            onSelectMode={setVoiceMode}
-          />
-        </div>
-
-        {/* Bottom-Right: Mood Indicator Card */}
-        <div className="flex-1 flex justify-end">
-          <MoodIndicator
-            personality={diagnostics.personality}
-            onClick={() => setIsSettingsOpen(true)}
-          />
-        </div>
+      {/* 4. Bottom Page Footer with Creator Credit */}
+      <footer className="relative z-30 w-full pb-3 pt-1 flex items-center justify-center pointer-events-auto">
+        <span className="text-[11px] sm:text-xs font-sans text-purple-300/60 tracking-wider flex items-center gap-1.5 backdrop-blur-sm px-3 py-1 rounded-full border border-purple-500/10">
+          Created by {CoreIdentityConfig.creator}
+          <span className="text-purple-400 text-xs">💜</span>
+        </span>
       </footer>
 
       {/* Settings Modal Overlay */}

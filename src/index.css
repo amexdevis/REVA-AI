@@ -100,6 +100,24 @@
     }
   }
 
+  /* Rising Platform Spark */
+  @keyframes platform-spark-float {
+    0% {
+      transform: translateY(0) scale(0.6);
+      opacity: 0;
+    }
+    25% {
+      opacity: 0.85;
+    }
+    75% {
+      opacity: 0.5;
+    }
+    100% {
+      transform: translateY(-80px) scale(1.2);
+      opacity: 0;
+    }
+  }
+
   .animate-reva-breathe {
     animation: reva-breathe-lifelike 5.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
     transform-origin: center 45%;
@@ -128,6 +146,22 @@
 
   .animate-ring-pulse {
     animation: ring-pulse 3.2s ease-in-out infinite;
+  }
+
+  .animate-platform-spark {
+    animation: platform-spark-float 4s ease-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-reva-breathe,
+    .animate-reva-sway,
+    .animate-holo-cw,
+    .animate-holo-ccw,
+    .animate-aura-pulse,
+    .animate-ring-pulse,
+    .animate-platform-spark {
+      animation: none !important;
+    }
   }
 }
 

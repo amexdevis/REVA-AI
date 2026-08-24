@@ -34,7 +34,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       case 'CONNECTING':
         return {
           greetingText: "Hey, I'm here.",
-          statusText: 'Connecting to Gemini Live...',
+          statusText: 'Connecting to neural core...',
         };
       case 'USER_SPEAKING':
       case 'LISTENING': {
@@ -46,14 +46,14 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       }
       case 'READY':
         return {
-          greetingText: "Hey, I'm here.",
-          statusText: 'Give me a second...',
+          greetingText: 'Hello.',
+          statusText: "I'm listening...",
         };
       case 'REVA_SPEAKING': {
         const lastReva = [...transcripts].reverse().find((t) => t.role === 'reva');
         return {
           greetingText: lastReva ? `"${lastReva.text}"` : 'Hello.',
-          statusText: 'Here you go...',
+          statusText: 'Speaking...',
         };
       }
       case 'INTERRUPTED':
@@ -69,75 +69,51 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     }
   }, [sessionState, transcripts]);
 
-  // Audio equalizer bars: generate 24 bars symmetrical from center
-  const barCount = 24;
+  // Audio equalizer waveform bars matching reference image: 32 bars symmetrical peak
+  const barCount = 32;
   const bars = useMemo(() => {
     return Array.from({ length: barCount }, (_, i) => {
       const distFromCenter = Math.abs(i - barCount / 2) / (barCount / 2);
-      const curve = Math.exp(-distFromCenter * distFromCenter * 3.2);
+      const curve = Math.exp(-distFromCenter * distFromCenter * 3.5);
       return { id: i, curve };
     });
   }, [barCount]);
 
   return (
     <div
-      id="reva-left-audio-visualizer"
-      className="flex flex-col items-start justify-center max-w-[240px] sm:max-w-[300px] select-none text-left z-20"
+      id="reva-left-dialogue-card"
+      className="flex flex-col items-start justify-between w-[220px] sm:w-[240px] md:w-[255px] h-[190px] sm:h-[205px] p-4 sm:p-5 rounded-[22px] bg-transparent border border-purple-500/20 backdrop-blur-none shadow-none select-none text-left z-20 transition-all duration-300 hover:border-purple-500/40"
     >
-      {/* Horizontal Audio Waveform Bars */}
-      <div className="flex items-center gap-[2.5px] sm:gap-[3px] h-8 mb-3 px-0.5">
-        {bars.map((bar) => {
-          const baseHeight = 3;
-          const dynamicHeight = Math.max(
-            baseHeight,
-            baseHeight + bar.curve * (14 + audioLevel * 28) * (0.8 + Math.sin(bar.id * 1.2) * 0.2)
-          );
+      {/* Middle: Large Display Text & Subtitle */}
+      <div className="flex flex-col my-auto">
+        <h2 className="text-2xl sm:text-3xl md:text-[32px] font-normal text-zinc-100 font-sans tracking-tight leading-tight drop-shadow-[0_0_15px_rgba(216,180,254,0.35)] line-clamp-2">
+          {greetingText === 'Hello.' ? (
+            <>
+              Hello<span className="text-purple-400">.</span>
+            </>
+          ) : (
+            greetingText
+          )}
+        </h2>
 
-          return (
-            <div
-              key={bar.id}
-              className="w-[2px] sm:w-[2.5px] rounded-full transition-all duration-75"
-              style={{
-                height: `${dynamicHeight}px`,
-                backgroundColor:
-                  sessionState === 'REVA_SPEAKING'
-                    ? '#e9d5ff'
-                    : sessionState === 'LISTENING' || sessionState === 'USER_SPEAKING'
-                    ? '#d8b4fe'
-                    : '#a855f7',
-                boxShadow:
-                  audioLevel > 0.05
-                    ? `0 0 8px rgba(216, 180, 254, ${0.4 + audioLevel * 0.6})`
-                    : 'none',
-              }}
-            />
-          );
-        })}
+        <p className="mt-1.5 text-xs text-purple-200/70 font-sans tracking-wide">
+          {statusText}
+        </p>
       </div>
 
-      {/* Primary Greeting Line */}
-      <h2 className="text-xl sm:text-2xl md:text-3xl font-light text-zinc-100 font-sans tracking-tight leading-snug drop-shadow-[0_0_15px_rgba(216,180,254,0.4)] line-clamp-2">
-        {greetingText}
-      </h2>
-
-      {/* Secondary Status Subtitle */}
-      <p className="mt-1.5 text-xs sm:text-sm text-purple-300/80 font-sans tracking-wide">
-        {statusText}
-      </p>
-
-      {/* Three Pulsing Holographic Dots */}
-      <div className="flex items-center gap-1.5 mt-3">
+      {/* Bottom: Three Pulsing Holographic Dots */}
+      <div className="flex items-center gap-1.5">
         <span
-          className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"
+          className="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#c084fc] animate-pulse"
           style={{ animationDelay: '0ms' }}
         />
         <span
-          className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"
-          style={{ animationDelay: '200ms' }}
+          className="w-1.5 h-1.5 rounded-full bg-purple-400/80 shadow-[0_0_5px_#c084fc] animate-pulse"
+          style={{ animationDelay: '250ms' }}
         />
         <span
-          className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"
-          style={{ animationDelay: '400ms' }}
+          className="w-1.5 h-1.5 rounded-full bg-purple-400/60 shadow-[0_0_4px_#c084fc] animate-pulse"
+          style={{ animationDelay: '500ms' }}
         />
       </div>
     </div>
