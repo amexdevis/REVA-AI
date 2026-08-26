@@ -51,51 +51,60 @@ export const HolographicPlatform: React.FC<HolographicPlatformProps> = ({
         className="relative w-full h-full flex items-center justify-center transition-transform duration-1000"
         style={{ transform: 'perspective(800px) rotateX(76deg)' }}
       >
-        {/* Outermost soft volumetric light wash */}
+        {/* Outermost soft volumetric light wash with smooth photometric falloff */}
         <div
-          className="absolute w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.22)_0%,rgba(126,34,206,0.1)_45%,transparent_70%)] transition-opacity duration-700 pointer-events-none"
+          className="absolute w-[520px] h-[520px] rounded-full bg-[radial-gradient(circle,rgba(147,51,234,0.18)_0%,rgba(107,33,168,0.08)_40%,transparent_70%)] transition-opacity duration-700 pointer-events-none"
           style={{
             opacity: isSpeaking ? 1 : isListening ? 0.9 : 0.75,
-            transform: `scale(${1 + audioLevel * 0.1})`,
+            transform: `scale(${1 + audioLevel * 0.08})`,
+          }}
+        />
+
+        {/* Realistic ground contact shadow & reflection basin */}
+        <div
+          className="absolute w-[320px] h-[320px] rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.25)_0%,rgba(88,28,135,0.12)_45%,transparent_75%)] pointer-events-none"
+          style={{
+            filter: 'blur(8px)',
+            opacity: 0.85,
           }}
         />
 
         {/* Ring 4: Outermost Fine Orbit Ring (Slow CW 40s) */}
         <div
-          className="absolute w-[460px] h-[460px] rounded-full border border-purple-500/30 animate-holo-cw transition-colors duration-700"
+          className="absolute w-[460px] h-[460px] rounded-full border border-purple-500/25 animate-holo-cw transition-colors duration-700"
           style={{
             animationDuration: '40s',
-            borderWidth: '1px',
-            boxShadow: `0 0 ${14 + audioLevel * 20}px rgba(168, 85, 247, ${0.2 + audioLevel * 0.2})`,
+            borderWidth: '0.85px',
+            boxShadow: `0 0 ${12 + audioLevel * 16}px rgba(168, 85, 247, ${0.16 + audioLevel * 0.16})`,
           }}
         />
 
         {/* Ring 3: Middle Fine-Dashed Luminous Ring (Speed: Smooth CCW 28s) */}
         <div
-          className="absolute w-[360px] h-[360px] rounded-full border border-dashed border-purple-400/50 animate-holo-ccw transition-all duration-500"
+          className="absolute w-[360px] h-[360px] rounded-full border border-dashed border-purple-400/40 animate-holo-ccw transition-all duration-500"
           style={{
             animationDuration: '28s',
-            borderWidth: '1px',
-            boxShadow: `0 0 ${12 + audioLevel * 18}px rgba(192, 132, 252, ${0.25 + audioLevel * 0.25})`,
+            borderWidth: '0.85px',
+            boxShadow: `0 0 ${10 + audioLevel * 14}px rgba(192, 132, 252, ${0.2 + audioLevel * 0.2})`,
           }}
         />
 
         {/* Ring 2: Inner Fine Emitter Ring (Speed: Smooth CW 20s) with glowing nodes */}
         <div
-          className="absolute w-[260px] h-[260px] rounded-full border-2 border-purple-300/70 animate-holo-cw transition-all duration-300"
+          className="absolute w-[260px] h-[260px] rounded-full border border-purple-300/60 animate-holo-cw transition-all duration-300"
           style={{
             animationDuration: '20s',
-            transform: `scale(${1 + audioLevel * 0.06})`,
-            boxShadow: `0 0 ${18 + audioLevel * 25}px rgba(216, 180, 254, ${0.45 + audioLevel * 0.3}), inset 0 0 12px rgba(168, 85, 247, 0.3)`,
+            transform: `scale(${1 + audioLevel * 0.05})`,
+            boxShadow: `0 0 ${15 + audioLevel * 20}px rgba(216, 180, 254, ${0.35 + audioLevel * 0.25}), inset 0 0 10px rgba(168, 85, 247, 0.25)`,
           }}
         />
 
-        {/* Ring 1: Core Intense Radiant Disc directly under sneakers */}
+        {/* Ring 1: Core Radiant Disc directly under sneakers with realistic upward contact reflection */}
         <div
-          className="absolute w-[160px] h-[160px] rounded-full bg-gradient-to-r from-purple-400/30 via-pink-400/30 to-purple-400/30 border-2 border-purple-200 animate-ring-pulse transition-all duration-300"
+          className="absolute w-[160px] h-[160px] rounded-full bg-gradient-to-r from-purple-400/20 via-pink-300/25 to-purple-400/20 border border-purple-200/80 animate-ring-pulse transition-all duration-300"
           style={{
-            transform: `scale(${1 + audioLevel * 0.12})`,
-            boxShadow: `0 0 ${24 + audioLevel * 35}px rgba(216, 180, 254, 0.8), inset 0 0 20px rgba(192, 132, 252, 0.6)`,
+            transform: `scale(${1 + audioLevel * 0.08})`,
+            boxShadow: `0 0 ${20 + audioLevel * 25}px rgba(216, 180, 254, 0.65), inset 0 0 16px rgba(192, 132, 252, 0.5)`,
           }}
         />
       </div>

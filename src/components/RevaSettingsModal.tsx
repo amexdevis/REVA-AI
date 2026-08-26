@@ -40,6 +40,10 @@ interface RevaSettingsModalProps {
   onToggleMusic?: () => void;
   onSelectMusicMode?: (mode: AmbientMusicMode) => void;
   onSetMusicVolume?: (volume: number) => void;
+  energyFlareEnabled?: boolean;
+  onToggleEnergyFlare?: () => void;
+  characterTestAnimation?: boolean;
+  onToggleCharacterTestAnimation?: () => void;
 }
 
 export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
@@ -60,6 +64,10 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
   onToggleMusic,
   onSelectMusicMode,
   onSetMusicVolume,
+  energyFlareEnabled = true,
+  onToggleEnergyFlare,
+  characterTestAnimation = false,
+  onToggleCharacterTestAnimation,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'general' | 'proactive' | 'system' | 'dev'>('general');
   const [browserDiag, setBrowserDiag] = useState<any>(null);
@@ -649,6 +657,78 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
                       ? 'DUCKED (~3.5% for Speech)'
                       : 'ATMOSPHERE ACTIVE'}
                   </span>
+                </div>
+              </div>
+
+              {/* Energy Flare Developer Diagnostics & Toggle */}
+              <div className="p-3 bg-purple-950/40 rounded-xl border border-purple-800/60 space-y-1.5">
+                <div className="flex justify-between font-semibold text-purple-300 pb-1 border-b border-purple-900/60 items-center">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                    <span>Energy Flare Visual Effect:</span>
+                  </div>
+                  <button
+                    onClick={onToggleEnergyFlare}
+                    className={`px-2.5 py-0.5 rounded text-xs font-mono font-semibold cursor-pointer transition-all ${
+                      energyFlareEnabled
+                        ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]'
+                        : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400'
+                    }`}
+                  >
+                    {energyFlareEnabled ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Path:</span>
+                  <span className="text-purple-200 font-medium">Feet → Legs → Torso → Shoulders → Head</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Cycle Duration:</span>
+                  <span className="text-purple-200 font-medium">3.0s Rise + 1.8s Pause (Looping)</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Particles:</span>
+                  <span className="text-emerald-400 font-medium">10-14 Luminous Lavender Motes</span>
+                </div>
+              </div>
+
+              {/* Character Animation Diagnostic & Layer Verification */}
+              <div className="p-3 bg-purple-950/40 rounded-xl border border-purple-800/60 space-y-2">
+                <div className="flex justify-between font-semibold text-purple-300 pb-1 border-b border-purple-900/60 items-center">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-3.5 h-3.5 text-purple-300" />
+                    <span>Character Animation Diagnostic:</span>
+                  </div>
+                  <button
+                    onClick={onToggleCharacterTestAnimation}
+                    className={`px-2.5 py-0.5 rounded text-xs font-mono font-semibold cursor-pointer transition-all ${
+                      characterTestAnimation
+                        ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.5)]'
+                        : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400'
+                    }`}
+                  >
+                    CHARACTER TEST: {characterTestAnimation ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Asset File:</span>
+                  <span className="text-purple-200 font-mono text-[11px]">reva_full_body_standing_1786954466183.jpg</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Asset Format:</span>
+                  <span className="text-purple-200 font-mono text-[11px]">JPG (Flattened 2D Raster)</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Rendering Method:</span>
+                  <span className="text-purple-200 font-mono text-[11px]">Canvas Cutout → HTML &lt;img&gt;</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Hair Separate Layer:</span>
+                  <span className="text-rose-400 font-medium">NO (Single Flattened Image)</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Hair Independent Motion:</span>
+                  <span className="text-amber-400 font-medium">Requires Rigged / Layered Asset</span>
                 </div>
               </div>
 

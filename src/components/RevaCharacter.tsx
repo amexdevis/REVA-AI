@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { VoiceSessionState, RevaEmotionalState } from '../types/voice.types.js';
 import { removeDarkBackground } from '../utils/imageTransparency.js';
+import { RevaEnergyFlare } from './RevaEnergyFlare.js';
 
 import revaStandingImage from '../assets/images/reva_full_body_standing_1786954466183.jpg';
 
@@ -15,6 +16,8 @@ interface RevaCharacterProps {
   revaAudioLevel: number;
   emotionalState?: RevaEmotionalState;
   onCharacterClick?: () => void;
+  energyFlareEnabled?: boolean;
+  characterTestAnimation?: boolean;
 }
 
 export const RevaCharacter: React.FC<RevaCharacterProps> = ({
@@ -23,6 +26,8 @@ export const RevaCharacter: React.FC<RevaCharacterProps> = ({
   revaAudioLevel,
   emotionalState = 'CALM',
   onCharacterClick,
+  energyFlareEnabled = true,
+  characterTestAnimation = false,
 }) => {
   const [characterSrc, setCharacterSrc] = useState<string>(revaStandingImage);
   const [naturalTilt, setNaturalTilt] = useState(0);
@@ -81,30 +86,77 @@ export const RevaCharacter: React.FC<RevaCharacterProps> = ({
     return () => clearInterval(interval);
   }, [emotionalState]);
 
-  // 3. Cinematic Environmental Lighting Integration Filter
-  // Right side: Subtle warm sun bounce; Left side: Soft cosmic violet; Base: platform contact
+  // 3. Dynamic Cosmic Time & Directional Ambient Space Lighting
+  const [lightPhase, setLightPhase] = useState(0);
+
+  useEffect(() => {
+    let animId: number;
+    let startTime = performance.now();
+
+    const updateLight = () => {
+      const elapsed = (performance.now() - startTime) * 0.00018;
+      setLightPhase(elapsed);
+      animId = requestAnimationFrame(updateLight);
+    };
+
+    animId = requestAnimationFrame(updateLight);
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  // Compute realistic multi-directional environmental light integration
+  // - Upper-Right: Soft warm sunlight reflecting off right hair, shoulder, and arm silhouette
+  // - Upper-Left: Subtle deep violet space rim light along left hair and silhouette
+  // - Ambient Mid: Cool blue-violet cosmic fill from spiral galaxy
+  // - Base / Pedestal: Soft upward violet platform reflection fading off towards upper torso
   const characterFilter = useMemo(() => {
+    // Micro-shifts matching celestial motion
+    const sunOffsetX = 3.5 + Math.sin(lightPhase) * 0.8;
+    const sunOffsetY = -2.5 + Math.cos(lightPhase * 0.8) * 0.6;
+    const galaxyIntensity = 0.22 + Math.sin(lightPhase * 1.4) * 0.03;
+
     if (isOffline) {
-      return 'drop-shadow(0 0 10px rgba(107, 33, 168, 0.2)) brightness(0.92) contrast(1.02)';
+      return 'drop-shadow(0 0 8px rgba(107, 33, 168, 0.2)) brightness(0.92) contrast(1.02)';
     }
 
     if (isSpeaking) {
-      const radius = 16 + revaAudioLevel * 30;
-      return `drop-shadow(-3px 0 12px rgba(168, 85, 247, 0.45)) drop-shadow(3px -2px 14px rgba(254, 240, 138, 0.22)) drop-shadow(0 0 ${radius}px rgba(216, 180, 254, 0.4)) brightness(1.04) contrast(1.02)`;
+      const radius = 12 + revaAudioLevel * 20;
+      return [
+        `drop-shadow(-3.5px 0 9px rgba(168, 85, 247, ${0.32 + revaAudioLevel * 0.15}))`, // Violet space rim
+        `drop-shadow(${sunOffsetX}px ${sunOffsetY}px 11px rgba(254, 243, 199, 0.18))`, // Warm sun bounce
+        `drop-shadow(-2px -2px 14px rgba(129, 140, 248, 0.14))`, // Cool cosmic galaxy fill
+        `drop-shadow(0 7px ${radius}px rgba(192, 132, 252, ${0.28 + revaAudioLevel * 0.2}))`, // Upward platform bounce
+        `brightness(1.02) contrast(1.02)`,
+      ].join(' ');
     }
 
     if (isListening) {
-      const radius = 12 + userAudioLevel * 25;
-      return `drop-shadow(-3px 0 10px rgba(147, 51, 234, 0.4)) drop-shadow(3px -2px 12px rgba(254, 240, 138, 0.18)) drop-shadow(0 0 ${radius}px rgba(192, 132, 252, 0.35)) brightness(1.02)`;
+      const radius = 10 + userAudioLevel * 16;
+      return [
+        `drop-shadow(-3.5px 0 8px rgba(147, 51, 234, ${0.28 + userAudioLevel * 0.12}))`,
+        `drop-shadow(${sunOffsetX}px ${sunOffsetY}px 10px rgba(254, 243, 199, 0.16))`,
+        `drop-shadow(-2px -2px 12px rgba(129, 140, 248, 0.12))`,
+        `drop-shadow(0 7px ${radius}px rgba(192, 132, 252, ${0.24 + userAudioLevel * 0.15}))`,
+        `brightness(1.01)`,
+      ].join(' ');
     }
 
     if (isThinking) {
-      return 'drop-shadow(-3px 0 10px rgba(168, 85, 247, 0.35)) drop-shadow(3px -2px 10px rgba(254, 240, 138, 0.15)) drop-shadow(0 0 16px rgba(216, 180, 254, 0.3))';
+      return [
+        `drop-shadow(-3.5px 0 8px rgba(168, 85, 247, 0.28))`,
+        `drop-shadow(${sunOffsetX}px ${sunOffsetY}px 9px rgba(254, 243, 199, 0.15))`,
+        `drop-shadow(-2px -2px 12px rgba(129, 140, 248, 0.12))`,
+        `drop-shadow(0 7px 12px rgba(216, 180, 254, 0.22))`,
+      ].join(' ');
     }
 
-    // Default Calm Idle: Subtle cinematic multi-directional rim light
-    return 'drop-shadow(-3px 0 10px rgba(147, 51, 234, 0.3)) drop-shadow(3px -2px 10px rgba(254, 240, 138, 0.15)) drop-shadow(0 0 12px rgba(192, 132, 252, 0.22))';
-  }, [isOffline, isSpeaking, isListening, isThinking, revaAudioLevel, userAudioLevel]);
+    // Default Calm Idle: Balanced multi-source cinematic lighting
+    return [
+      `drop-shadow(-3.5px 0 8px rgba(147, 51, 234, ${galaxyIntensity}))`, // Violet space rim
+      `drop-shadow(${sunOffsetX}px ${sunOffsetY}px 9px rgba(254, 243, 199, 0.14))`, // Gentle warm sun
+      `drop-shadow(-2px -2px 12px rgba(129, 140, 248, 0.11))`, // Cool cosmic fill
+      `drop-shadow(0 7px 10px rgba(168, 85, 247, 0.18))`, // Ground platform bounce
+    ].join(' ');
+  }, [isOffline, isSpeaking, isListening, isThinking, revaAudioLevel, userAudioLevel, lightPhase]);
 
   return (
     <div
@@ -115,16 +167,16 @@ export const RevaCharacter: React.FC<RevaCharacterProps> = ({
         transform: `rotate(${naturalTilt}deg) translate(${postureOffset.x}px, ${postureOffset.y}px)`,
       }}
     >
-      {/* 1. Soft atmospheric environmental haze behind REVA silhouette */}
+      {/* 1. Soft Ambient Space Light Field behind REVA (Subtle violet-to-gold environmental blend) */}
       <div
-        className={`absolute -inset-8 rounded-full blur-3xl transition-all duration-1000 pointer-events-none ${
+        className={`absolute -inset-10 rounded-full blur-3xl transition-all duration-1000 pointer-events-none ${
           isSpeaking
-            ? 'bg-purple-500/20 scale-105'
+            ? 'bg-[radial-gradient(ellipse_at_70%_35%,rgba(254,243,199,0.06)_0%,rgba(168,85,247,0.18)_50%,transparent_75%)] scale-105'
             : isListening
-            ? 'bg-purple-600/16 scale-100'
+            ? 'bg-[radial-gradient(ellipse_at_70%_35%,rgba(254,243,199,0.05)_0%,rgba(147,51,234,0.15)_50%,transparent_75%)] scale-100'
             : isOffline
             ? 'bg-transparent'
-            : 'bg-purple-700/12 scale-95'
+            : 'bg-[radial-gradient(ellipse_at_70%_35%,rgba(254,243,199,0.04)_0%,rgba(126,34,206,0.12)_50%,transparent_75%)] scale-95'
         }`}
       />
 
@@ -132,17 +184,32 @@ export const RevaCharacter: React.FC<RevaCharacterProps> = ({
       <div
         className={`relative z-10 h-[56vh] sm:h-[60vh] md:h-[63vh] max-h-[68vh] min-h-[420px] w-auto flex items-center justify-center transition-all duration-500 ${
           isOffline ? 'opacity-85' : 'opacity-100 animate-reva-breathe animate-reva-sway'
-        } ${isListening ? '-translate-y-0.5' : 'translate-y-0'}`}
+        } ${isListening ? '-translate-y-0.5' : 'translate-y-0'} ${
+          characterTestAnimation ? 'animate-character-debug' : ''
+        }`}
       >
+        {/* Base Sharp Character Model */}
         <img
           src={characterSrc}
           alt="REVA - Anime AI Companion"
           referrerPolicy="no-referrer"
-          className="h-full w-auto object-contain pointer-events-none transition-all duration-300"
+          className="h-full w-auto object-contain pointer-events-none transition-all duration-300 select-none"
           style={{
             filter: characterFilter,
           }}
         />
+
+        {/* Soft upward platform light reflection layer at feet/lower body with natural falloff */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-purple-500/10 via-purple-600/04 to-transparent pointer-events-none rounded-b-xl"
+          style={{
+            mixBlendMode: 'screen',
+            opacity: isSpeaking ? 0.9 : isListening ? 0.75 : 0.6,
+          }}
+        />
+
+        {/* 3. Rising Purple Energy Flare Effect (Feet to Head) */}
+        <RevaEnergyFlare isOffline={isOffline} enabled={energyFlareEnabled} />
 
         {/* Subtle Eyelid Micro-Blink */}
         {isBlinking && (

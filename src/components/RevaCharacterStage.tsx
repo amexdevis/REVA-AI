@@ -65,22 +65,42 @@ export const RevaCharacterStage: React.FC<RevaCharacterStageProps> = ({
   // Determine active visual state glow
   const getGlowFilter = () => {
     if (isOffline) {
-      return 'drop-shadow(0 0 10px rgba(107, 33, 168, 0.2)) saturate(0.85) brightness(0.8)';
+      return 'drop-shadow(0 0 8px rgba(107, 33, 168, 0.2)) saturate(0.9) brightness(0.88)';
     }
     if (isSpeaking) {
-      const radius = 20 + revaAudioLevel * 45;
-      const alpha = 0.5 + revaAudioLevel * 0.4;
-      return `drop-shadow(0 0 ${radius}px rgba(192, 132, 252, ${alpha})) drop-shadow(0 0 ${radius * 1.5}px rgba(147, 51, 234, 0.4)) saturate(1.1) brightness(1.05)`;
+      const radius = 12 + revaAudioLevel * 20;
+      return [
+        `drop-shadow(-3.5px 0 9px rgba(168, 85, 247, 0.35))`,
+        `drop-shadow(3.5px -2.5px 11px rgba(254, 243, 199, 0.18))`,
+        `drop-shadow(-2px -2px 14px rgba(129, 140, 248, 0.14))`,
+        `drop-shadow(0 7px ${radius}px rgba(192, 132, 252, 0.3))`,
+        `saturate(1.05) brightness(1.02)`,
+      ].join(' ');
     }
     if (isListening) {
-      const radius = 15 + userAudioLevel * 35;
-      return `drop-shadow(0 0 ${radius}px rgba(56, 189, 248, 0.6)) drop-shadow(0 0 ${radius * 1.3}px rgba(168, 85, 247, 0.4))`;
+      const radius = 10 + userAudioLevel * 16;
+      return [
+        `drop-shadow(-3.5px 0 8px rgba(147, 51, 234, 0.3))`,
+        `drop-shadow(3.5px -2.5px 10px rgba(254, 243, 199, 0.16))`,
+        `drop-shadow(-2px -2px 12px rgba(129, 140, 248, 0.12))`,
+        `drop-shadow(0 7px ${radius}px rgba(192, 132, 252, 0.25))`,
+      ].join(' ');
     }
     if (isThinking) {
-      return 'drop-shadow(0 0 25px rgba(216, 180, 254, 0.6)) drop-shadow(0 0 40px rgba(192, 132, 252, 0.35))';
+      return [
+        `drop-shadow(-3.5px 0 8px rgba(168, 85, 247, 0.28))`,
+        `drop-shadow(3.5px -2.5px 9px rgba(254, 243, 199, 0.15))`,
+        `drop-shadow(-2px -2px 12px rgba(129, 140, 248, 0.12))`,
+        `drop-shadow(0 7px 12px rgba(216, 180, 254, 0.22))`,
+      ].join(' ');
     }
     // Idle / Ready
-    return 'drop-shadow(0 0 18px rgba(168, 85, 247, 0.45)) drop-shadow(0 0 35px rgba(126, 34, 206, 0.25))';
+    return [
+      `drop-shadow(-3.5px 0 8px rgba(147, 51, 234, 0.22))`,
+      `drop-shadow(3.5px -2.5px 9px rgba(254, 243, 199, 0.14))`,
+      `drop-shadow(-2px -2px 12px rgba(129, 140, 248, 0.11))`,
+      `drop-shadow(0 7px 10px rgba(168, 85, 247, 0.18))`,
+    ].join(' ');
   };
 
   // Select image based on speaking/attentive state

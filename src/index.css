@@ -118,6 +118,204 @@
     }
   }
 
+  /* Smooth Cinematic Purple Energy Flare (Feet to Head Rise ~4.2s + 2.8s pause) */
+  @keyframes energy-flare-rise {
+    0% {
+      transform: translateY(20px) scaleX(0.75);
+      opacity: 0;
+    }
+    6% {
+      opacity: 0.75;
+      transform: translateY(-40px) scaleX(0.9);
+    }
+    20% {
+      opacity: 0.85;
+      transform: translateY(-160px) scaleX(1.02);
+    }
+    35% {
+      opacity: 0.9;
+      transform: translateY(-300px) scaleX(1.08);
+    }
+    48% {
+      opacity: 0.75;
+      transform: translateY(-440px) scaleX(0.98);
+    }
+    58% {
+      opacity: 0.35;
+      transform: translateY(-560px) scaleX(0.85);
+    }
+    64% {
+      opacity: 0;
+      transform: translateY(-640px) scaleX(0.7);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(20px) scaleX(0.75);
+    }
+  }
+
+  @keyframes energy-flare-rise-secondary {
+    0%, 4% {
+      transform: translateY(30px) scaleX(0.7);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.55;
+      transform: translateY(-30px) scaleX(0.85);
+    }
+    24% {
+      opacity: 0.65;
+      transform: translateY(-150px) scaleX(1);
+    }
+    38% {
+      opacity: 0.7;
+      transform: translateY(-290px) scaleX(1.04);
+    }
+    50% {
+      opacity: 0.5;
+      transform: translateY(-430px) scaleX(0.95);
+    }
+    60% {
+      opacity: 0;
+      transform: translateY(-550px) scaleX(0.8);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(30px) scaleX(0.7);
+    }
+  }
+
+  /* Sparse Floating Flare Motes */
+  @keyframes flare-particle-rise-1 {
+    0% {
+      transform: translateY(0) translateX(0);
+      opacity: 0;
+    }
+    8% {
+      opacity: 0.85;
+    }
+    30% {
+      transform: translateY(-200px) translateX(6px);
+      opacity: 0.9;
+    }
+    55% {
+      transform: translateY(-480px) translateX(-4px);
+      opacity: 0.5;
+    }
+    64% {
+      transform: translateY(-580px) translateX(2px);
+      opacity: 0;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(0) translateX(0);
+    }
+  }
+
+  @keyframes flare-particle-rise-2 {
+    0%, 3% {
+      transform: translateY(0) translateX(0);
+      opacity: 0;
+    }
+    12% {
+      opacity: 0.9;
+    }
+    35% {
+      transform: translateY(-260px) translateX(-8px);
+      opacity: 0.85;
+    }
+    56% {
+      transform: translateY(-500px) translateX(6px);
+      opacity: 0.4;
+    }
+    66% {
+      transform: translateY(-610px) translateX(-2px);
+      opacity: 0;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(0) translateX(0);
+    }
+  }
+
+  @keyframes flare-particle-rise-3 {
+    0%, 6% {
+      transform: translateY(0) translateX(0);
+      opacity: 0;
+    }
+    15% {
+      opacity: 0.8;
+    }
+    38% {
+      transform: translateY(-280px) translateX(5px);
+      opacity: 0.75;
+    }
+    58% {
+      transform: translateY(-520px) translateX(-6px);
+      opacity: 0.35;
+    }
+    65% {
+      transform: translateY(-600px) translateX(0px);
+      opacity: 0;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(0) translateX(0);
+    }
+  }
+
+  @keyframes flare-particle-rise-4 {
+    0%, 2% {
+      transform: translateY(0) translateX(0);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.85;
+    }
+    32% {
+      transform: translateY(-220px) translateX(-5px);
+      opacity: 0.8;
+    }
+    54% {
+      transform: translateY(-460px) translateX(4px);
+      opacity: 0.45;
+    }
+    63% {
+      transform: translateY(-570px) translateX(-2px);
+      opacity: 0;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(0) translateX(0);
+    }
+  }
+
+  @keyframes flare-particle-rise-5 {
+    0%, 5% {
+      transform: translateY(0) translateX(0);
+      opacity: 0;
+    }
+    14% {
+      opacity: 0.8;
+    }
+    36% {
+      transform: translateY(-250px) translateX(7px);
+      opacity: 0.75;
+    }
+    57% {
+      transform: translateY(-490px) translateX(-3px);
+      opacity: 0.4;
+    }
+    65% {
+      transform: translateY(-590px) translateX(1px);
+      opacity: 0;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(0) translateX(0);
+    }
+  }
+
   .animate-reva-breathe {
     animation: reva-breathe-lifelike 5.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
     transform-origin: center 45%;
@@ -152,6 +350,184 @@
     animation: platform-spark-float 4s ease-out infinite;
   }
 
+  /* Continuous Living Hair Motion Keyframes - Physics-based multi-tier space wave */
+  @keyframes hair-strand-left-flow {
+    0% {
+      transform: rotate(0deg) skewX(0deg) translate(0px, 0px);
+    }
+    25% {
+      transform: rotate(calc(-3.8deg * var(--hair-scale, 1.6))) skewX(calc(-2.2deg * var(--hair-scale, 1.6))) translate(calc(-7px * var(--hair-scale, 1.6)), calc(-2.5px * var(--hair-scale, 1.6)));
+    }
+    50% {
+      transform: rotate(calc(1.2deg * var(--hair-scale, 1.6))) skewX(calc(0.8deg * var(--hair-scale, 1.6))) translate(calc(2.5px * var(--hair-scale, 1.6)), calc(0.5px * var(--hair-scale, 1.6)));
+    }
+    75% {
+      transform: rotate(calc(-2.4deg * var(--hair-scale, 1.6))) skewX(calc(-1.4deg * var(--hair-scale, 1.6))) translate(calc(-5px * var(--hair-scale, 1.6)), calc(-1.8px * var(--hair-scale, 1.6)));
+    }
+    100% {
+      transform: rotate(0deg) skewX(0deg) translate(0px, 0px);
+    }
+  }
+
+  @keyframes hair-strand-right-flow {
+    0% {
+      transform: rotate(0deg) skewX(0deg) translate(0px, 0px);
+    }
+    30% {
+      transform: rotate(calc(4.2deg * var(--hair-scale, 1.6))) skewX(calc(2.5deg * var(--hair-scale, 1.6))) translate(calc(8px * var(--hair-scale, 1.6)), calc(-2.8px * var(--hair-scale, 1.6)));
+    }
+    55% {
+      transform: rotate(calc(-1.4deg * var(--hair-scale, 1.6))) skewX(calc(-0.9deg * var(--hair-scale, 1.6))) translate(calc(-3px * var(--hair-scale, 1.6)), calc(0.8px * var(--hair-scale, 1.6)));
+    }
+    80% {
+      transform: rotate(calc(2.8deg * var(--hair-scale, 1.6))) skewX(calc(1.6deg * var(--hair-scale, 1.6))) translate(calc(5.5px * var(--hair-scale, 1.6)), calc(-1.6px * var(--hair-scale, 1.6)));
+    }
+    100% {
+      transform: rotate(0deg) skewX(0deg) translate(0px, 0px);
+    }
+  }
+
+  @keyframes hair-tips-wave {
+    0% {
+      transform: translate(0px, 0px) skewX(0deg) scale(1, 1);
+    }
+    28% {
+      transform: translate(calc(-11px * var(--hair-scale, 1.6)), calc(-5.5px * var(--hair-scale, 1.6))) skewX(calc(-3.2deg * var(--hair-scale, 1.6))) scale(1.015, 1.025);
+    }
+    60% {
+      transform: translate(calc(8px * var(--hair-scale, 1.6)), calc(-3px * var(--hair-scale, 1.6))) skewX(calc(2.4deg * var(--hair-scale, 1.6))) scale(1.01, 1.015);
+    }
+    82% {
+      transform: translate(calc(-4px * var(--hair-scale, 1.6)), calc(-1.5px * var(--hair-scale, 1.6))) skewX(calc(-1.2deg * var(--hair-scale, 1.6))) scale(1.005, 1.008);
+    }
+    100% {
+      transform: translate(0px, 0px) skewX(0deg) scale(1, 1);
+    }
+  }
+
+  @keyframes hair-bangs-flow {
+    0% {
+      transform: translate(0px, 0px) skewX(0deg);
+    }
+    35% {
+      transform: translate(calc(-3px * var(--hair-scale, 1.6)), calc(-1.5px * var(--hair-scale, 1.6))) skewX(calc(-1.2deg * var(--hair-scale, 1.6)));
+    }
+    70% {
+      transform: translate(calc(2.5px * var(--hair-scale, 1.6)), calc(-0.8px * var(--hair-scale, 1.6))) skewX(calc(0.9deg * var(--hair-scale, 1.6)));
+    }
+    100% {
+      transform: translate(0px, 0px) skewX(0deg);
+    }
+  }
+
+  @keyframes hair-back-swell {
+    0% {
+      transform: scale(1, 1) translate(0px, 0px);
+    }
+    33% {
+      transform: scale(calc(1 + 0.02 * var(--hair-scale, 1.6)), calc(1 + 0.025 * var(--hair-scale, 1.6))) translate(calc(-4px * var(--hair-scale, 1.6)), calc(-3px * var(--hair-scale, 1.6)));
+    }
+    66% {
+      transform: scale(calc(1 + 0.015 * var(--hair-scale, 1.6)), calc(1 + 0.018 * var(--hair-scale, 1.6))) translate(calc(4px * var(--hair-scale, 1.6)), calc(-1.5px * var(--hair-scale, 1.6)));
+    }
+    100% {
+      transform: scale(1, 1) translate(0px, 0px);
+    }
+  }
+
+  .animate-energy-flare {
+    animation: energy-flare-rise 7.2s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+    will-change: transform, opacity;
+  }
+
+  .animate-energy-flare-secondary {
+    animation: energy-flare-rise-secondary 7.2s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+    will-change: transform, opacity;
+  }
+
+  .animate-flare-particle-1 {
+    animation: flare-particle-rise-1 7.2s cubic-bezier(0.35, 0.05, 0.25, 1) infinite;
+    box-shadow: 0 0 6px rgba(216, 180, 254, 0.8);
+    will-change: transform, opacity;
+  }
+
+  .animate-flare-particle-2 {
+    animation: flare-particle-rise-2 7.2s cubic-bezier(0.35, 0.05, 0.25, 1) infinite;
+    box-shadow: 0 0 8px rgba(244, 114, 182, 0.7);
+    will-change: transform, opacity;
+  }
+
+  .animate-flare-particle-3 {
+    animation: flare-particle-rise-3 7.2s cubic-bezier(0.35, 0.05, 0.25, 1) infinite;
+    box-shadow: 0 0 6px rgba(192, 132, 252, 0.8);
+    will-change: transform, opacity;
+  }
+
+  .animate-flare-particle-4 {
+    animation: flare-particle-rise-4 7.2s cubic-bezier(0.35, 0.05, 0.25, 1) infinite;
+    box-shadow: 0 0 6px rgba(216, 180, 254, 0.8);
+    will-change: transform, opacity;
+  }
+
+  .animate-flare-particle-5 {
+    animation: flare-particle-rise-5 7.2s cubic-bezier(0.35, 0.05, 0.25, 1) infinite;
+    box-shadow: 0 0 6px rgba(168, 85, 247, 0.8);
+    will-change: transform, opacity;
+  }
+
+  @keyframes character-debug-sway {
+    0%, 100% {
+      transform: translateX(0px);
+    }
+    50% {
+      transform: translateX(30px);
+    }
+  }
+
+  .animate-character-debug {
+    animation: character-debug-sway 2s ease-in-out infinite !important;
+  }
+
+  .hair-motion-low {
+    --hair-scale: 0.65;
+  }
+  .hair-motion-medium {
+    --hair-scale: 1.15;
+  }
+  .hair-motion-high {
+    --hair-scale: 1.85;
+  }
+
+  .animate-hair-left {
+    animation: hair-strand-left-flow 3.1s cubic-bezier(0.44, 0.05, 0.55, 0.95) infinite;
+    transform-origin: 38% 12%;
+    will-change: transform;
+  }
+
+  .animate-hair-right {
+    animation: hair-strand-right-flow 3.6s cubic-bezier(0.44, 0.05, 0.55, 0.95) infinite;
+    transform-origin: 62% 12%;
+    will-change: transform;
+  }
+
+  .animate-hair-tips {
+    animation: hair-tips-wave 2.8s cubic-bezier(0.44, 0.05, 0.55, 0.95) infinite;
+    transform-origin: 50% 20%;
+    will-change: transform;
+  }
+
+  .animate-hair-bangs {
+    animation: hair-bangs-flow 2.5s cubic-bezier(0.44, 0.05, 0.55, 0.95) infinite;
+    transform-origin: 50% 12%;
+    will-change: transform;
+  }
+
+  .animate-hair-back {
+    animation: hair-back-swell 3.9s cubic-bezier(0.44, 0.05, 0.55, 0.95) infinite;
+    transform-origin: 50% 15%;
+    will-change: transform;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-reva-breathe,
     .animate-reva-sway,
@@ -159,7 +535,19 @@
     .animate-holo-ccw,
     .animate-aura-pulse,
     .animate-ring-pulse,
-    .animate-platform-spark {
+    .animate-platform-spark,
+    .animate-energy-flare,
+    .animate-energy-flare-secondary,
+    .animate-flare-particle-1,
+    .animate-flare-particle-2,
+    .animate-flare-particle-3,
+    .animate-flare-particle-4,
+    .animate-flare-particle-5,
+    .animate-hair-left,
+    .animate-hair-right,
+    .animate-hair-tips,
+    .animate-hair-bangs,
+    .animate-hair-back {
       animation: none !important;
     }
   }

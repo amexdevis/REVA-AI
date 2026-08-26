@@ -13,7 +13,7 @@ interface AmbientParticlesProps {
   emotionalState?: RevaEmotionalState;
 }
 
-interface Star {
+interface RealisticStar {
   x: number;
   y: number;
   size: number;
@@ -25,41 +25,31 @@ interface Star {
   vx: number;
   vy: number;
   hasSpike?: boolean;
+  spectralType: 'O_BLUE' | 'A_WHITE' | 'G_WARM' | 'M_AMBER';
 }
 
-interface GalaxyParticle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  size: number;
+interface GalaxyGasPocket {
+  armIndex: number;
+  distRatio: number;
+  angleOffset: number;
+  radius: number;
+  alpha: number;
   color: string;
+  speed: number;
 }
 
 interface DustMote {
   x: number;
   y: number;
   size: number;
+  depth: 'FAR' | 'MID' | 'FOREGROUND';
   vx: number;
   vy: number;
   alpha: number;
   baseAlpha: number;
-  color: string;
+  colorType: 'NEUTRAL' | 'WARM_GOLD' | 'VIOLET';
   phase: number;
   driftSpeed: number;
-}
-
-interface GalacticDustCluster {
-  x: number;
-  y: number;
-  radius: number;
-  alpha: number;
-  color: string;
-  angleOffset: number;
-  distRatio: number;
-  speed: number;
 }
 
 export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
@@ -90,93 +80,154 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
 
     window.addEventListener('resize', handleResize);
 
-    // Realistic Starfield: Magnitude distribution
+    // ==========================================
+    // REALISTIC STARFIELD GENERATION
+    // Accurate magnitude distribution: mostly faint micro-points, very few bright foreground anchors
+    // ==========================================
     const starCount = 260;
-    const realisticStarColors = [
-      '#ffffff',
-      '#f8fafc',
-      '#e2e8f0',
-      '#e0e7ff',
-      '#ede9fe',
-      '#fef08a',
-      '#fde047',
-      '#fed7aa',
-    ];
-
-    const stars: Star[] = Array.from({ length: starCount }, () => {
+    const stars: RealisticStar[] = Array.from({ length: starCount }, () => {
       const depth = Math.random();
-      const isForeground = depth > 0.88;
-      const size =
-        depth < 0.65
-          ? Math.random() * 0.7 + 0.3
-          : depth < 0.88
-          ? Math.random() * 1.1 + 0.6
-          : Math.random() * 1.8 + 1.1;
-      const baseAlpha =
-        depth < 0.65
-          ? Math.random() * 0.35 + 0.2
-          : depth < 0.88
-          ? Math.random() * 0.5 + 0.35
-          : Math.random() * 0.4 + 0.6;
+      // True astrophotography stars: pinpricks of light rather than large circles
+      let size: number;
+      let baseAlpha: number;
+      let hasSpike = false;
+
+      if (depth < 0.7) {
+        // Deep background micro-stars (vast majority)
+        size = Math.random() * 0.45 + 0.3;
+        baseAlpha = Math.random() * 0.35 + 0.15;
+      } else if (depth < 0.92) {
+        // Midground stars
+        size = Math.random() * 0.55 + 0.55;
+        baseAlpha = Math.random() * 0.45 + 0.35;
+      } else {
+        // Foreground prominent stars (rare)
+        size = Math.random() * 0.65 + 0.85;
+        baseAlpha = Math.random() * 0.35 + 0.65;
+        hasSpike = Math.random() < 0.22;
+      }
+
+      // Realistic stellar spectral classification (O/B blue-white, A pure white, G warm yellow, M faint red/amber)
+      const colorRoll = Math.random();
+      let color = '#ffffff';
+      let spectralType: RealisticStar['spectralType'] = 'A_WHITE';
+
+      if (colorRoll < 0.45) {
+        color = '#ffffff';
+        spectralType = 'A_WHITE';
+      } else if (colorRoll < 0.72) {
+        color = '#e0f2fe'; // Pale Diamond Blue
+        spectralType = 'O_BLUE';
+      } else if (colorRoll < 0.88) {
+        color = '#fef3c7'; // Warm Solar Cream
+        spectralType = 'G_WARM';
+      } else {
+        color = '#fed7aa'; // Soft Amber
+        spectralType = 'M_AMBER';
+      }
+
       return {
         x: Math.random() * width,
         y: Math.random() * height,
         size,
         depth,
         baseAlpha,
-        twinkleSpeed: Math.random() * 0.015 + 0.004,
+        twinkleSpeed: Math.random() * 0.012 + 0.003,
         twinklePhase: Math.random() * Math.PI * 2,
-        color: realisticStarColors[Math.floor(Math.random() * realisticStarColors.length)],
-        vx: (depth * 0.006 + 0.002) * -1,
-        vy: (depth * 0.003 + 0.001) * -1,
-        hasSpike: isForeground && Math.random() < 0.28,
+        color,
+        spectralType,
+        vx: (depth * 0.004 + 0.001) * -1,
+        vy: (depth * 0.002 + 0.0008) * -1,
+        hasSpike,
       };
     });
 
-    // Galactic Dust Clusters
-    const galacticClusters: GalacticDustCluster[] = [];
-    const arms = 2;
-    for (let i = 0; i < 220; i++) {
-      const distRatio = Math.pow(Math.random(), 0.85);
-      const angleOffset = (Math.random() - 0.5) * 0.4;
-      const radius = 10 + Math.random() * 26;
-      const colors = [
-        'rgba(216, 180, 254, 0.12)',
-        'rgba(192, 132, 252, 0.08)',
-        'rgba(147, 51, 234, 0.06)',
-        'rgba(254, 240, 138, 0.06)',
-        'rgba(255, 255, 255, 0.15)',
-      ];
-      galacticClusters.push({
-        x: 0,
-        y: 0,
-        radius,
-        alpha: Math.random() * 0.45 + 0.15,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        angleOffset,
+    // ==========================================
+    // REALISTIC SPIRAL GALAXY GAS & DUST GENERATION
+    // Logarithmic spiral distribution with dark dust lanes and soft stellar gas
+    // ==========================================
+    const galaxyGasPockets: GalaxyGasPocket[] = [];
+    const galaxyGasCount = 180;
+    const gasColors = [
+      'rgba(245, 235, 255, 0.07)', // Stellar core haze
+      'rgba(216, 180, 254, 0.05)', // Ionized hydrogen / soft violet
+      'rgba(167, 139, 250, 0.04)', // Interstellar medium
+      'rgba(129, 140, 248, 0.035)', // Distant blue arm fringe
+      'rgba(254, 243, 199, 0.045)', // Warm stellar cluster
+    ];
+
+    for (let i = 0; i < galaxyGasCount; i++) {
+      const armIndex = i % 2;
+      const distRatio = Math.pow(Math.random(), 0.9);
+      const angleOffset = (Math.random() - 0.5) * 0.35;
+      const radius = 12 + Math.random() * 22;
+      galaxyGasPockets.push({
+        armIndex,
         distRatio,
-        speed: 0.96 + Math.random() * 0.08,
+        angleOffset,
+        radius,
+        alpha: Math.random() * 0.35 + 0.1,
+        color: gasColors[Math.floor(Math.random() * gasColors.length)],
+        speed: 0.98 + Math.random() * 0.04,
       });
     }
 
-    // Dynamic Fading Galaxy Energy Particles
-    const galaxyParticles: GalaxyParticle[] = [];
-    const maxGalaxyParticles = 35;
+    // ==========================================
+    // COSMIC STARDUST MOTES WITH 3-TIER DEPTH PARALLAX
+    // Low density: Far microscopic motes, mid drifting motes, foreground soft bokeh motes
+    // ==========================================
+    const dustMotes: DustMote[] = [];
 
-    // Cosmic Dust Motes
-    const dustCount = 30;
-    const dustMotes: DustMote[] = Array.from({ length: dustCount }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      size: Math.random() * 1.5 + 0.5,
-      vx: (Math.random() - 0.5) * 0.08,
-      vy: -(Math.random() * 0.12 + 0.04),
-      alpha: Math.random() * 0.35 + 0.15,
-      baseAlpha: Math.random() * 0.35 + 0.15,
-      color: Math.random() > 0.6 ? '#f3e8ff' : '#d8b4fe',
-      phase: Math.random() * Math.PI * 2,
-      driftSpeed: Math.random() * 0.008 + 0.004,
-    }));
+    // Tier 1: FAR dust motes (almost stationary, micro pinpricks)
+    for (let i = 0; i < 16; i++) {
+      dustMotes.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        size: Math.random() * 0.35 + 0.35,
+        depth: 'FAR',
+        vx: (Math.random() - 0.5) * 0.012,
+        vy: -(Math.random() * 0.018 + 0.006),
+        alpha: Math.random() * 0.1 + 0.04,
+        baseAlpha: Math.random() * 0.1 + 0.04,
+        colorType: Math.random() > 0.6 ? 'VIOLET' : 'NEUTRAL',
+        phase: Math.random() * Math.PI * 2,
+        driftSpeed: Math.random() * 0.003 + 0.001,
+      });
+    }
+
+    // Tier 2: MID-DEPTH dust motes (gentle cosmic drift)
+    for (let i = 0; i < 14; i++) {
+      dustMotes.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        size: Math.random() * 0.5 + 0.65,
+        depth: 'MID',
+        vx: (Math.random() - 0.5) * 0.025,
+        vy: -(Math.random() * 0.04 + 0.012),
+        alpha: Math.random() * 0.15 + 0.06,
+        baseAlpha: Math.random() * 0.15 + 0.06,
+        colorType: Math.random() > 0.5 ? 'WARM_GOLD' : Math.random() > 0.5 ? 'VIOLET' : 'NEUTRAL',
+        phase: Math.random() * Math.PI * 2,
+        driftSpeed: Math.random() * 0.005 + 0.002,
+      });
+    }
+
+    // Tier 3: FOREGROUND soft bokeh dust motes (subtle floating, catch light)
+    for (let i = 0; i < 8; i++) {
+      dustMotes.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        size: Math.random() * 0.7 + 1.1,
+        depth: 'FOREGROUND',
+        vx: (Math.random() - 0.5) * 0.04,
+        vy: -(Math.random() * 0.06 + 0.02),
+        alpha: Math.random() * 0.18 + 0.08,
+        baseAlpha: Math.random() * 0.18 + 0.08,
+        colorType: Math.random() > 0.4 ? 'WARM_GOLD' : 'VIOLET',
+        phase: Math.random() * Math.PI * 2,
+        driftSpeed: Math.random() * 0.006 + 0.003,
+      });
+    }
 
     let tick = 0;
     let galaxyRotation = 0;
@@ -185,138 +236,190 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
     const render = () => {
       tick++;
       if (!prefersReducedMotion) {
-        galaxyRotation += 0.00035;
-        saturnRingOscillation += 0.0004;
+        galaxyRotation += 0.00025;
+        saturnRingOscillation += 0.0003;
       }
 
       const audioBoost = Math.max(userAudioLevel, revaAudioLevel);
 
       // ==========================================
-      // 1. DEEP SPACE CANVAS WITH COLOR-GRADED VIOLET OBSIDIAN DEPTH
+      // CELESTIAL MOTION & PARALLAX COORDINATES
+      // Continuous, majestic slow orbital drift with depth-based speeds
+      // ==========================================
+      const motionTick = prefersReducedMotion ? 0 : tick;
+
+      // 1. Distant Sun: subtle, majestic solar arc across upper-right horizon (~15 min cycle)
+      const sunTime = motionTick * 0.00012;
+      const sunX = width * (0.74 + Math.sin(sunTime) * 0.08 + Math.cos(sunTime * 0.5) * 0.03);
+      const sunY = height * (0.31 + Math.cos(sunTime * 0.75) * 0.06);
+      const sunPulse = Math.sin(tick * 0.006) * 0.02 + 1;
+
+      // 2. Ringed Planet (Upper-Left): deep orbital glide across upper space
+      const rPlanetTime = motionTick * 0.00018;
+      const rPlanetX = width * (0.31 + Math.sin(rPlanetTime) * 0.16 + Math.cos(rPlanetTime * 0.6) * 0.05);
+      const rPlanetY = height * (0.27 + Math.cos(rPlanetTime * 0.8) * 0.09);
+      const rPlanetRadius = 25;
+
+      // 3. Satellite 1 (Mid-Right): mid-depth celestial body with slightly faster parallax
+      const p1Time = motionTick * 0.00026 + 1.2;
+      const p1X = width * (0.66 + Math.cos(p1Time) * 0.15 + Math.sin(p1Time * 0.7) * 0.04);
+      const p1Y = height * (0.61 + Math.sin(p1Time * 0.85) * 0.11);
+      const p1Radius = 13;
+
+      // 4. Satellite 2 (Lower-Right): slow majestic horizon orbit
+      const p2Time = motionTick * 0.00015 + 2.8;
+      const p2X = width * (0.92 + Math.sin(p2Time) * 0.12);
+      const p2Y = height * (0.70 + Math.cos(p2Time * 0.7) * 0.08);
+      const p2Radius = 23;
+
+      // ==========================================
+      // 1. DEEP SPACE VOID WITH REALISTIC OPTICAL GRADIENT
+      // Subtle deep obsidian with midnight navy and dark violet undertones (non-cartoon)
       // ==========================================
       const spaceGrad = ctx.createRadialGradient(
-        width * 0.75, height * 0.32, 10,
-        width * 0.5, height * 0.5, Math.max(width, height) * 0.95
+        sunX, sunY, 20,
+        width * 0.5, height * 0.55, Math.max(width, height) * 0.95
       );
-      spaceGrad.addColorStop(0, '#0f0422');
-      spaceGrad.addColorStop(0.35, '#060110');
-      spaceGrad.addColorStop(0.7, '#020006');
-      spaceGrad.addColorStop(1, '#000000');
+      spaceGrad.addColorStop(0, '#0a0318'); // Near sun/galaxy illumination
+      spaceGrad.addColorStop(0.28, '#04010d'); // Deep cosmic violet
+      spaceGrad.addColorStop(0.65, '#020106'); // Interstellar shadow
+      spaceGrad.addColorStop(1, '#000000'); // Pure space void
       ctx.fillStyle = spaceGrad;
       ctx.fillRect(0, 0, width, height);
 
       // ==========================================
-      // 2. DIAGONAL GALACTIC DUST LANE (Crossing from center-left behind REVA to top-right)
+      // 2. SOFT VOLUMETRIC INTERSTELLAR ABSORPTION & EMISSION NEBULA
+      // Soft, diffuse, photographic gas clouds with light falloff instead of saturated neon streaks
       // ==========================================
       ctx.save();
-      const dustLaneGrad = ctx.createLinearGradient(0, height * 0.65, width, height * 0.28);
-      dustLaneGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      dustLaneGrad.addColorStop(0.25, 'rgba(59, 13, 100, 0.12)');
-      dustLaneGrad.addColorStop(0.5, 'rgba(126, 34, 206, 0.18)');
-      dustLaneGrad.addColorStop(0.72, 'rgba(217, 119, 6, 0.14)');
-      dustLaneGrad.addColorStop(0.85, 'rgba(254, 240, 138, 0.16)');
-      dustLaneGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = dustLaneGrad;
+
+      // Soft diagonal cosmic dust lane crossing the background
+      const nebulaGrad = ctx.createLinearGradient(0, height * 0.7, width, height * 0.25);
+      nebulaGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      nebulaGrad.addColorStop(0.2, 'rgba(24, 6, 42, 0.08)');
+      nebulaGrad.addColorStop(0.48, 'rgba(48, 14, 82, 0.11)');
+      nebulaGrad.addColorStop(0.72, 'rgba(15, 23, 42, 0.09)');
+      nebulaGrad.addColorStop(0.85, 'rgba(45, 24, 16, 0.07)');
+      nebulaGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = nebulaGrad;
       ctx.fillRect(0, 0, width, height);
+
+      // Distant soft emission cloud behind the upper right horizon
+      const emissionGlow = ctx.createRadialGradient(
+        sunX + width * 0.04, sunY - height * 0.05, 40,
+        sunX + width * 0.04, sunY - height * 0.05, Math.min(width, height) * 0.45
+      );
+      emissionGlow.addColorStop(0, 'rgba(109, 40, 217, 0.08)');
+      emissionGlow.addColorStop(0.4, 'rgba(67, 24, 120, 0.045)');
+      emissionGlow.addColorStop(0.8, 'rgba(15, 23, 42, 0.02)');
+      emissionGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = emissionGlow;
+      ctx.fillRect(0, 0, width, height);
+
       ctx.restore();
 
       // ==========================================
-      // 3. CURVED PLANETARY LIMB (Lower Left Earth/Titan Horizon)
-      // Matching Reference Image with Rayleigh Atmosphere & City Lights
+      // 3. CURVED PLANETARY LIMB (Lower Left Horizon)
+      // Realistic Rayleigh Scattering, Exponential Atmospheric Falloff, Dark Shadow Hemisphere
       // ==========================================
       const pLimbX = width * -0.12;
       const pLimbY = height * 1.15;
       const pLimbRadius = Math.min(width, height) * 0.88;
 
       ctx.save();
-      // Dark planetary body
+
+      // Deep unlit planetary mass with absolute shadow occlusion
       const pBodyGrad = ctx.createRadialGradient(
-        pLimbX, pLimbY, pLimbRadius * 0.6,
+        pLimbX, pLimbY, pLimbRadius * 0.65,
         pLimbX, pLimbY, pLimbRadius
       );
-      pBodyGrad.addColorStop(0, '#010206');
-      pBodyGrad.addColorStop(0.82, '#030818');
-      pBodyGrad.addColorStop(0.96, '#081735');
-      pBodyGrad.addColorStop(1, '#0e2452');
+      pBodyGrad.addColorStop(0, '#000000');
+      pBodyGrad.addColorStop(0.85, '#010106');
+      pBodyGrad.addColorStop(0.96, '#030614');
+      pBodyGrad.addColorStop(1, '#051024');
       ctx.fillStyle = pBodyGrad;
       ctx.beginPath();
       ctx.arc(pLimbX, pLimbY, pLimbRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Atmospheric Rayleigh scattering rim (Bright Cyan & Blue & Violet Glow)
+      // Atmospheric Rayleigh scattering: natural exponential gradient falloff into space
       const atmoGrad = ctx.createRadialGradient(
-        pLimbX, pLimbY, pLimbRadius - 6,
-        pLimbX, pLimbY, pLimbRadius + 12
+        pLimbX, pLimbY, pLimbRadius - 3,
+        pLimbX, pLimbY, pLimbRadius + 16
       );
-      atmoGrad.addColorStop(0, 'rgba(96, 165, 250, 0.7)');
-      atmoGrad.addColorStop(0.35, 'rgba(129, 140, 248, 0.55)');
-      atmoGrad.addColorStop(0.7, 'rgba(192, 132, 252, 0.35)');
+      atmoGrad.addColorStop(0, 'rgba(56, 189, 248, 0.38)');
+      atmoGrad.addColorStop(0.2, 'rgba(99, 102, 241, 0.26)');
+      atmoGrad.addColorStop(0.55, 'rgba(147, 51, 234, 0.12)');
+      atmoGrad.addColorStop(0.85, 'rgba(59, 130, 246, 0.03)');
       atmoGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
       ctx.strokeStyle = atmoGrad;
-      ctx.lineWidth = 9;
+      ctx.lineWidth = 12;
       ctx.beginPath();
-      ctx.arc(pLimbX, pLimbY, pLimbRadius, -Math.PI * 0.45, 0.1);
+      ctx.arc(pLimbX, pLimbY, pLimbRadius + 2, -Math.PI * 0.45, 0.1);
       ctx.stroke();
 
-      // Razor-sharp 1px outer atmospheric filament
-      ctx.strokeStyle = 'rgba(191, 219, 254, 0.85)';
-      ctx.lineWidth = 1.5;
+      // Fine grazing sunlight horizon airglow
+      ctx.strokeStyle = 'rgba(224, 242, 254, 0.65)';
+      ctx.lineWidth = 0.85;
       ctx.beginPath();
-      ctx.arc(pLimbX, pLimbY, pLimbRadius, -Math.PI * 0.45, 0.1);
+      ctx.arc(pLimbX, pLimbY, pLimbRadius, -Math.PI * 0.45, 0.08);
       ctx.stroke();
+
       ctx.restore();
 
       // ==========================================
-      // 4. DISTANT RADIANT SUN & HORIZONTAL ANAMORPHIC FLARE
-      // (Located at center-right horizon behind REVA's shoulder, as in reference image)
+      // 4. DISTANT RADIANT SUN & OPTICAL CORONA (Center-Right Horizon)
+      // Natural Solar Photometrics, Soft Warm-White/Gold Light, Gentle Falloff
       // ==========================================
-      const sunX = width * 0.74;
-      const sunY = height * 0.31;
-      const sunPulse = Math.sin(tick * 0.008) * 0.03 + 1;
-
       ctx.save();
-      // Broad golden volumetric illumination
-      const sunAmbient = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 320 * sunPulse);
-      sunAmbient.addColorStop(0, 'rgba(254, 243, 199, 0.32)');
-      sunAmbient.addColorStop(0.2, 'rgba(251, 191, 36, 0.18)');
-      sunAmbient.addColorStop(0.5, 'rgba(216, 180, 254, 0.08)');
+
+      // Broad astronomical ambient illumination (soft gold into deep violet space)
+      const sunAmbient = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 260 * sunPulse);
+      sunAmbient.addColorStop(0, 'rgba(255, 252, 242, 0.18)');
+      sunAmbient.addColorStop(0.14, 'rgba(253, 230, 138, 0.09)');
+      sunAmbient.addColorStop(0.38, 'rgba(196, 148, 250, 0.035)');
+      sunAmbient.addColorStop(0.75, 'rgba(24, 16, 52, 0.01)');
       sunAmbient.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = sunAmbient;
       ctx.beginPath();
-      ctx.arc(sunX, sunY, 320 * sunPulse, 0, Math.PI * 2);
+      ctx.arc(sunX, sunY, 260 * sunPulse, 0, Math.PI * 2);
       ctx.fill();
 
-      // Horizontal cinematic lens flare beam (matching reference image)
-      const flareGrad = ctx.createLinearGradient(sunX - 280, sunY, sunX + 280, sunY);
+      // Subtle horizontal optical lens dispersion (feathered, non-intrusive)
+      const flareWidth = 380;
+      const flareGrad = ctx.createLinearGradient(sunX - flareWidth / 2, sunY, sunX + flareWidth / 2, sunY);
       flareGrad.addColorStop(0, 'rgba(254, 243, 199, 0)');
-      flareGrad.addColorStop(0.35, 'rgba(254, 240, 138, 0.25)');
-      flareGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.75)');
-      flareGrad.addColorStop(0.65, 'rgba(254, 240, 138, 0.25)');
+      flareGrad.addColorStop(0.35, 'rgba(254, 240, 138, 0.045)');
+      flareGrad.addColorStop(0.48, 'rgba(255, 255, 255, 0.38)');
+      flareGrad.addColorStop(0.52, 'rgba(255, 255, 255, 0.38)');
+      flareGrad.addColorStop(0.65, 'rgba(254, 240, 138, 0.045)');
       flareGrad.addColorStop(1, 'rgba(254, 243, 199, 0)');
       ctx.fillStyle = flareGrad;
-      ctx.fillRect(sunX - 280, sunY - 2, 560, 4);
+      ctx.fillRect(sunX - flareWidth / 2, sunY - 1, flareWidth, 2);
 
-      // Core Corona
-      const sunCorona = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 50);
+      // Inner Solar Corona Atmosphere
+      const sunCorona = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 32);
       sunCorona.addColorStop(0, '#ffffff');
-      sunCorona.addColorStop(0.2, '#fef08a');
-      sunCorona.addColorStop(0.6, 'rgba(245, 158, 11, 0.55)');
+      sunCorona.addColorStop(0.22, '#fef9c3');
+      sunCorona.addColorStop(0.55, 'rgba(245, 158, 11, 0.22)');
       sunCorona.addColorStop(1, 'rgba(245, 158, 11, 0)');
       ctx.fillStyle = sunCorona;
       ctx.beginPath();
-      ctx.arc(sunX, sunY, 50, 0, Math.PI * 2);
+      ctx.arc(sunX, sunY, 32, 0, Math.PI * 2);
       ctx.fill();
 
-      // Intense White Core
+      // Stellar Core Pinprick
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(sunX, sunY, 6, 0, Math.PI * 2);
+      ctx.arc(sunX, sunY, 4, 0, Math.PI * 2);
       ctx.fill();
+
       ctx.restore();
 
       // ==========================================
-      // 5. REALISTIC STARS WITH 3-LAYER DEPTH & TWINKLING
+      // 5. REALISTIC STARS WITH 3-LAYER DEPTH & NATURAL TWINKLE
+      // Sub-pixel pinpricks, delicate scintillation, spectral temperature colors
       // ==========================================
       stars.forEach((s) => {
         if (!prefersReducedMotion) {
@@ -326,22 +429,23 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
           if (s.y < 0) s.y = height;
         }
 
-        const twinkle = Math.sin(tick * s.twinkleSpeed + s.twinklePhase) * 0.25 + 0.75;
+        const twinkle = Math.sin(tick * s.twinkleSpeed + s.twinklePhase) * 0.2 + 0.8;
         const currentAlpha = Math.min(
           1,
-          s.baseAlpha * twinkle + (s.depth > 0.85 ? audioBoost * 0.15 : 0)
+          s.baseAlpha * twinkle + (s.depth > 0.88 ? audioBoost * 0.12 : 0)
         );
 
         ctx.fillStyle = s.color;
-        ctx.globalAlpha = Math.max(0.04, currentAlpha);
+        ctx.globalAlpha = Math.max(0.03, currentAlpha);
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
         ctx.fill();
 
-        if (s.hasSpike && twinkle > 0.88) {
+        // Very delicate diffraction spikes only for bright foreground anchor stars at peak twinkle
+        if (s.hasSpike && twinkle > 0.92) {
           ctx.strokeStyle = s.color;
-          ctx.lineWidth = 0.5;
-          const spikeLen = s.size * 3.2;
+          ctx.lineWidth = 0.4;
+          const spikeLen = s.size * 2.6;
           ctx.beginPath();
           ctx.moveTo(s.x - spikeLen, s.y);
           ctx.lineTo(s.x + spikeLen, s.y);
@@ -353,39 +457,39 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
       ctx.globalAlpha = 1.0;
 
       // ==========================================
-      // 6. GRAND SPIRAL GALAXY & FLOWING ENERGY PARTICLES
+      // 6. REALISTIC SPIRAL GALAXY (Upper Right)
+      // Smooth Logarithmic Spiral Arms, Warm Stellar Core Bulge, Dark Absorption Dust Lanes
       // ==========================================
       const galCenterX = width * 0.82;
       const galCenterY = height * 0.22;
-      const maxArmRadius = 180;
+      const maxArmRadius = 175;
 
       ctx.save();
       ctx.translate(galCenterX, galCenterY);
 
-      // Core galactic bulge
-      const galBulge = ctx.createRadialGradient(0, 0, 0, 0, 0, 65);
-      galBulge.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
-      galBulge.addColorStop(0.2, 'rgba(254, 240, 138, 0.35)');
-      galBulge.addColorStop(0.5, 'rgba(192, 132, 252, 0.18)');
-      galBulge.addColorStop(0.85, 'rgba(147, 51, 234, 0.06)');
+      // Galactic core stellar population (dense warm bulge with smooth exponential falloff)
+      const galBulge = ctx.createRadialGradient(0, 0, 0, 0, 0, 55);
+      galBulge.addColorStop(0, 'rgba(255, 253, 245, 0.45)');
+      galBulge.addColorStop(0.18, 'rgba(254, 240, 138, 0.25)');
+      galBulge.addColorStop(0.48, 'rgba(216, 180, 254, 0.1)');
+      galBulge.addColorStop(0.8, 'rgba(109, 40, 217, 0.03)');
       galBulge.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = galBulge;
       ctx.beginPath();
-      ctx.ellipse(0, 0, 70, 36, 0.35, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 60, 32, 0.38, 0, Math.PI * 2);
       ctx.fill();
 
-      // Spiral arms dust clusters
-      galacticClusters.forEach((gc, idx) => {
-        const armIndex = idx % 2;
-        const dist = 12 + gc.distRatio * (maxArmRadius - 12);
+      // Soft galactic spiral arm gas and dust clusters
+      galaxyGasPockets.forEach((gc) => {
+        const dist = 10 + gc.distRatio * (maxArmRadius - 10);
         const spiralAngle =
-          armIndex * Math.PI +
-          Math.log(dist / 10) * 1.55 +
+          gc.armIndex * Math.PI +
+          Math.log(dist / 9) * 1.52 +
           gc.angleOffset +
           galaxyRotation * gc.speed;
 
         const gx = Math.cos(spiralAngle) * dist;
-        const gy = Math.sin(spiralAngle) * (dist * 0.58);
+        const gy = Math.sin(spiralAngle) * (dist * 0.54);
 
         const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, gc.radius);
         grad.addColorStop(0, gc.color);
@@ -396,190 +500,243 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
         ctx.arc(gx, gy, gc.radius, 0, Math.PI * 2);
         ctx.fill();
       });
+
+      // Dark dust absorption lanes running along inner spiral arms
+      for (let arm = 0; arm < 2; arm++) {
+        ctx.beginPath();
+        for (let d = 20; d < maxArmRadius - 20; d += 15) {
+          const laneAngle = arm * Math.PI + Math.log(d / 9) * 1.52 - 0.12 + galaxyRotation;
+          const lx = Math.cos(laneAngle) * d;
+          const ly = Math.sin(laneAngle) * (d * 0.54);
+          if (d === 20) ctx.moveTo(lx, ly);
+          else ctx.lineTo(lx, ly);
+        }
+        ctx.strokeStyle = 'rgba(4, 1, 10, 0.28)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+      }
+
       ctx.restore();
 
-      // Occasionally release subtle luminous energy particles from galaxy core
-      if (!prefersReducedMotion && Math.random() < 0.08 && galaxyParticles.length < maxGalaxyParticles) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 0.3 + 0.1;
-        galaxyParticles.push({
-          x: galCenterX + (Math.random() - 0.5) * 40,
-          y: galCenterY + (Math.random() - 0.5) * 20,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 0,
-          maxLife: 120 + Math.random() * 100,
-          size: Math.random() * 1.4 + 0.6,
-          color: Math.random() > 0.5 ? '#f3e8ff' : '#fed7aa',
-        });
-      }
-
-      // Render flowing galaxy particles
-      for (let i = galaxyParticles.length - 1; i >= 0; i--) {
-        const gp = galaxyParticles[i];
-        gp.life++;
-        gp.x += gp.vx;
-        gp.y += gp.vy;
-
-        const progress = gp.life / gp.maxLife;
-        const pAlpha = Math.sin(progress * Math.PI) * 0.5;
-
-        ctx.fillStyle = gp.color;
-        ctx.globalAlpha = pAlpha;
-        ctx.beginPath();
-        ctx.arc(gp.x, gp.y, gp.size, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (gp.life >= gp.maxLife) {
-          galaxyParticles.splice(i, 1);
-        }
-      }
-      ctx.globalAlpha = 1.0;
-
       // ==========================================
-      // 7. REALISTIC RINGED SATURN-LIKE PLANET (Upper Left, matching reference image)
+      // 7. REALISTIC RINGED PLANET WITH PHYSICAL SHADING & RING SHADOWS (Upper Left)
+      // Photorealistic Spherical Terminator, Cast Shadows, Atmospheric Limb Glint & Atmospheric Space Haze
       // ==========================================
-      const rPlanetX = width * 0.31;
-      const rPlanetY = height * 0.27;
-      const rPlanetRadius = 26;
-
       ctx.save();
+
+      // Subtle atmospheric space haze around ringed planet
+      const rPlanetHaze = ctx.createRadialGradient(rPlanetX, rPlanetY, 0, rPlanetX, rPlanetY, rPlanetRadius * 2.6);
+      rPlanetHaze.addColorStop(0, 'rgba(168, 85, 247, 0.035)');
+      rPlanetHaze.addColorStop(0.5, 'rgba(109, 40, 217, 0.015)');
+      rPlanetHaze.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = rPlanetHaze;
+      ctx.beginPath();
+      ctx.arc(rPlanetX, rPlanetY, rPlanetRadius * 2.6, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.translate(rPlanetX, rPlanetY);
 
-      // Back of rings
-      const ringTilt = -0.42 + Math.sin(saturnRingOscillation) * 0.015;
-      ctx.save();
-      ctx.rotate(ringTilt);
-
-      // Outer ring back
-      ctx.strokeStyle = 'rgba(216, 180, 254, 0.3)';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 64, 16, 0, Math.PI, Math.PI * 2);
-      ctx.stroke();
-
-      // Inner ring back
-      ctx.strokeStyle = 'rgba(238, 210, 255, 0.5)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 50, 12, 0, Math.PI, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-
-      // Planet Spherical Shading (Terminator aligned with sun to the right)
+      const ringTilt = -0.42 + Math.sin(saturnRingOscillation) * 0.012;
       const lightAngle = Math.atan2(sunY - rPlanetY, sunX - rPlanetX);
-      const lightOffsetDist = rPlanetRadius * 0.45;
+      const lightOffsetDist = rPlanetRadius * 0.42;
       const lightCenterX = Math.cos(lightAngle) * lightOffsetDist;
       const lightCenterY = Math.sin(lightAngle) * lightOffsetDist;
 
+      // 1. BACK OF RINGS (behind planet)
+      ctx.save();
+      ctx.rotate(ringTilt);
+
+      // Back outer A-ring (ice-dust composition)
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.18)';
+      ctx.lineWidth = 4.2;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 62, 15, 0, Math.PI, Math.PI * 2);
+      ctx.stroke();
+
+      // Cassini Division (dark gap)
+      ctx.strokeStyle = 'rgba(2, 1, 6, 0.9)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 54, 13, 0, Math.PI, Math.PI * 2);
+      ctx.stroke();
+
+      // Back inner B-ring (dense reflective ice)
+      ctx.strokeStyle = 'rgba(241, 245, 249, 0.28)';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 48, 11.5, 0, Math.PI, Math.PI * 2);
+      ctx.stroke();
+
+      // Faint transparent C-ring (crepe ring)
+      ctx.strokeStyle = 'rgba(196, 181, 253, 0.08)';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 42, 10, 0, Math.PI, Math.PI * 2);
+      ctx.stroke();
+
+      // Shadow cast by planet onto the back rings
+      ctx.fillStyle = 'rgba(1, 0, 4, 0.85)';
+      ctx.beginPath();
+      ctx.arc(0, 0, rPlanetRadius + 1, lightAngle + Math.PI * 0.58, lightAngle + Math.PI * 1.42);
+      ctx.ellipse(0, 0, 64, 16, 0, lightAngle + Math.PI * 0.58, lightAngle + Math.PI * 1.42);
+      ctx.fill();
+
+      ctx.restore();
+
+      // 2. PLANET BODY WITH REALISTIC SPHERICAL SHADING & SUBTLE CLOUD BANDS
       const planetGrad = ctx.createRadialGradient(
         lightCenterX, lightCenterY, 2,
         0, 0, rPlanetRadius
       );
-      planetGrad.addColorStop(0, '#f5d0fe');
-      planetGrad.addColorStop(0.3, '#c084fc');
-      planetGrad.addColorStop(0.65, '#581c87');
-      planetGrad.addColorStop(0.88, '#1e0836');
-      planetGrad.addColorStop(1, '#05010a');
+      planetGrad.addColorStop(0, '#fdf4ff'); // Soft warm solar illumination
+      planetGrad.addColorStop(0.22, '#c4b5fd'); // Atmospheric diffusion
+      planetGrad.addColorStop(0.55, '#581c87'); // Deep violet planetary mantle
+      planetGrad.addColorStop(0.82, '#1e0836'); // Terminator twilight
+      planetGrad.addColorStop(1, '#020006'); // Complete night-side shadow
       ctx.fillStyle = planetGrad;
       ctx.beginPath();
       ctx.arc(0, 0, rPlanetRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Atmospheric rim light on sunlit side
-      ctx.strokeStyle = 'rgba(245, 208, 254, 0.5)';
-      ctx.lineWidth = 1.2;
+      // Subtle atmospheric cloud bands across the planet
+      ctx.save();
+      ctx.clip(); // Clip to planet sphere
+      ctx.rotate(ringTilt * 0.6);
+      for (let b = -rPlanetRadius; b < rPlanetRadius; b += 4) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.022)';
+        ctx.fillRect(-rPlanetRadius, b, rPlanetRadius * 2, 1.8);
+      }
+
+      // Natural shadow cast by rings onto the planet's sunlit hemisphere
+      ctx.fillStyle = 'rgba(2, 0, 6, 0.6)';
+      ctx.fillRect(-rPlanetRadius, -1.8, rPlanetRadius * 2, 3.2);
+      ctx.restore();
+
+      // Atmospheric rim light on sunlit crest (grazing sunlight)
+      ctx.strokeStyle = 'rgba(233, 213, 255, 0.4)';
+      ctx.lineWidth = 0.85;
       ctx.beginPath();
-      ctx.arc(0, 0, rPlanetRadius, lightAngle - Math.PI * 0.45, lightAngle + Math.PI * 0.45);
+      ctx.arc(0, 0, rPlanetRadius, lightAngle - Math.PI * 0.42, lightAngle + Math.PI * 0.42);
       ctx.stroke();
 
-      // Front of rings
+      // 3. FRONT OF RINGS (passing in front of planet)
       ctx.save();
       ctx.rotate(ringTilt);
 
-      // Outer ring front
-      ctx.strokeStyle = 'rgba(216, 180, 254, 0.4)';
-      ctx.lineWidth = 5;
+      // Front outer A-ring
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.24)';
+      ctx.lineWidth = 4.2;
       ctx.beginPath();
-      ctx.ellipse(0, 0, 64, 16, 0, 0, Math.PI);
+      ctx.ellipse(0, 0, 62, 15, 0, 0, Math.PI);
       ctx.stroke();
 
-      // Inner ring front
-      ctx.strokeStyle = 'rgba(238, 210, 255, 0.65)';
-      ctx.lineWidth = 3;
+      // Cassini Division front
+      ctx.strokeStyle = 'rgba(2, 1, 6, 0.92)';
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.ellipse(0, 0, 50, 12, 0, 0, Math.PI);
+      ctx.ellipse(0, 0, 54, 13, 0, 0, Math.PI);
       ctx.stroke();
+
+      // Front inner B-ring
+      ctx.strokeStyle = 'rgba(241, 245, 249, 0.38)';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 48, 11.5, 0, 0, Math.PI);
+      ctx.stroke();
+
+      // Front transparent C-ring
+      ctx.strokeStyle = 'rgba(196, 181, 253, 0.12)';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 42, 10, 0, 0, Math.PI);
+      ctx.stroke();
+
       ctx.restore();
-
       ctx.restore();
 
       // ==========================================
-      // 8. DISTANT SATELLITE CELESTIAL BODIES (Right side, matching reference image)
+      // 8. DISTANT CELESTIAL SATELLITE BODIES (Mid-Right & Lower-Right)
+      // Natural Lambertian Shading, Dark Obsidian Night Side, Delicate Rim Light
       // ==========================================
-      // Satellite 1: Mid-Right Planet
-      const p1X = width * 0.66;
-      const p1Y = height * 0.61;
-      const p1Radius = 14;
+      // Satellite 1: Mid-Right Planetoid
       const p1LightAngle = Math.atan2(sunY - p1Y, sunX - p1X);
-      const p1LX = p1X + Math.cos(p1LightAngle) * (p1Radius * 0.4);
-      const p1LY = p1Y + Math.sin(p1LightAngle) * (p1Radius * 0.4);
+      const p1LX = p1X + Math.cos(p1LightAngle) * (p1Radius * 0.38);
+      const p1LY = p1Y + Math.sin(p1LightAngle) * (p1Radius * 0.38);
 
       const p1Grad = ctx.createRadialGradient(p1LX, p1LY, 1, p1X, p1Y, p1Radius);
-      p1Grad.addColorStop(0, '#e9d5ff');
-      p1Grad.addColorStop(0.35, '#a855f7');
-      p1Grad.addColorStop(0.75, '#3b0764');
-      p1Grad.addColorStop(1, '#05010a');
+      p1Grad.addColorStop(0, '#f5f3ff');
+      p1Grad.addColorStop(0.24, '#7c3aed');
+      p1Grad.addColorStop(0.62, '#310954');
+      p1Grad.addColorStop(0.88, '#0d0217');
+      p1Grad.addColorStop(1, '#000000');
       ctx.fillStyle = p1Grad;
       ctx.beginPath();
       ctx.arc(p1X, p1Y, p1Radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Satellite 2: Lower-Right Rim-Lit Moon
-      const p2X = width * 0.95;
-      const p2Y = height * 0.7;
-      const p2Radius = 24;
+      // Satellite 2: Lower-Right Celestial Body
       const p2LightAngle = Math.atan2(sunY - p2Y, sunX - p2X);
-      const p2LX = p2X + Math.cos(p2LightAngle) * (p2Radius * 0.45);
-      const p2LY = p2Y + Math.sin(p2LightAngle) * (p2Radius * 0.45);
+      const p2LX = p2X + Math.cos(p2LightAngle) * (p2Radius * 0.42);
+      const p2LY = p2Y + Math.sin(p2LightAngle) * (p2Radius * 0.42);
 
       const p2Grad = ctx.createRadialGradient(p2LX, p2LY, 1, p2X, p2Y, p2Radius);
-      p2Grad.addColorStop(0, '#f3e8ff');
-      p2Grad.addColorStop(0.3, '#9333ea');
-      p2Grad.addColorStop(0.7, '#2e1065');
-      p2Grad.addColorStop(1, '#020005');
+      p2Grad.addColorStop(0, '#fdf4ff');
+      p2Grad.addColorStop(0.22, '#6d28d9');
+      p2Grad.addColorStop(0.6, '#23074d');
+      p2Grad.addColorStop(0.86, '#080114');
+      p2Grad.addColorStop(1, '#000000');
       ctx.fillStyle = p2Grad;
       ctx.beginPath();
       ctx.arc(p2X, p2Y, p2Radius, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.strokeStyle = 'rgba(216, 180, 254, 0.45)';
-      ctx.lineWidth = 1;
+      // Atmospheric rim light on sunlit crest
+      ctx.strokeStyle = 'rgba(216, 180, 254, 0.35)';
+      ctx.lineWidth = 0.85;
       ctx.beginPath();
-      ctx.arc(p2X, p2Y, p2Radius, p2LightAngle - Math.PI * 0.4, p2LightAngle + Math.PI * 0.4);
+      ctx.arc(p2X, p2Y, p2Radius, p2LightAngle - Math.PI * 0.38, p2LightAngle + Math.PI * 0.38);
       ctx.stroke();
 
       // ==========================================
-      // 9. GENTLE DRIFTING COSMIC DUST MOTES
+      // 9. DRIFTING BOKEH STARDUST MOTES WITH 3-TIER DEPTH
+      // Microscopic stardust drift with soft optical alpha and ambient light catching
       // ==========================================
       dustMotes.forEach((d) => {
         if (!prefersReducedMotion) {
           d.y += d.vy;
-          d.x += d.vx + Math.sin(tick * d.driftSpeed + d.phase) * 0.12;
+          d.x += d.vx + Math.sin(tick * d.driftSpeed + d.phase) * 0.05;
 
-          if (d.y < -10) {
-            d.y = height + 10;
+          if (d.y < -15) {
+            d.y = height + 15;
             d.x = Math.random() * width;
           }
+          if (d.x < -15) d.x = width + 15;
+          if (d.x > width + 15) d.x = -15;
         }
 
-        const alphaPulse = Math.sin(tick * d.driftSpeed + d.phase) * 0.2 + 0.8;
-        const currentAlpha = Math.min(0.6, d.baseAlpha * alphaPulse + audioBoost * 0.15);
+        const alphaPulse = Math.sin(tick * d.driftSpeed + d.phase) * 0.15 + 0.85;
+        let currentAlpha = d.baseAlpha * alphaPulse + audioBoost * 0.05;
+
+        // Dynamic light catching: particles catch warm gold near sun or violet in ambient field
+        const dxSun = d.x - sunX;
+        const dySun = d.y - sunY;
+        const distToSun = Math.sqrt(dxSun * dxSun + dySun * dySun);
+
+        let moteColor = '#f1f5f9';
+        if (d.colorType === 'WARM_GOLD' || (distToSun < 360 && d.depth !== 'FAR')) {
+          const warmFactor = Math.max(0, 1 - distToSun / 360);
+          moteColor = warmFactor > 0.35 ? '#fef3c7' : '#fed7aa';
+          currentAlpha += warmFactor * 0.07;
+        } else if (d.colorType === 'VIOLET') {
+          moteColor = '#e9d5ff';
+        } else {
+          moteColor = '#f8fafc';
+        }
 
         ctx.beginPath();
         ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
-        ctx.fillStyle = d.color;
-        ctx.globalAlpha = Math.max(0.02, currentAlpha);
+        ctx.fillStyle = moteColor;
+        ctx.globalAlpha = Math.min(0.38, Math.max(0.02, currentAlpha));
         ctx.fill();
       });
       ctx.globalAlpha = 1.0;
@@ -601,17 +758,17 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-[#000000]">
-      {/* Soft atmospheric violet ambient aura centered behind REVA */}
+      {/* Cinematic subtle atmospheric violet back-illumination centered behind REVA */}
       <div
-        className="absolute top-[44%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[540px] sm:w-[680px] h-[680px] rounded-full blur-[160px] pointer-events-none transition-all duration-1000"
+        className="absolute top-[44%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] sm:w-[640px] h-[640px] rounded-full blur-[180px] pointer-events-none transition-all duration-1000"
         style={{
           backgroundColor: isSpeaking
-            ? 'rgba(168, 85, 247, 0.16)'
+            ? 'rgba(147, 51, 234, 0.12)'
             : isListening
-            ? 'rgba(147, 51, 234, 0.13)'
-            : 'rgba(107, 33, 168, 0.09)',
-          transform: `translate(-50%, -50%) scale(${1 + audioLevel * 0.08})`,
-          opacity: 0.85,
+            ? 'rgba(126, 34, 206, 0.09)'
+            : 'rgba(76, 29, 149, 0.06)',
+          transform: `translate(-50%, -50%) scale(${1 + audioLevel * 0.06})`,
+          opacity: 0.8,
         }}
       />
 

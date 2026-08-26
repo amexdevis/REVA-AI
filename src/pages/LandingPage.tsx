@@ -104,6 +104,8 @@ export const LandingPage: React.FC = () => {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMemoryOpen, setIsMemoryOpen] = useState(false);
+  const [energyFlareEnabled, setEnergyFlareEnabled] = useState(true);
+  const [characterTestAnimation, setCharacterTestAnimation] = useState(false);
   const [activeDockTab, setActiveDockTab] = useState<'web' | 'notes' | 'tasks' | 'system'>('web');
   const hasTriggeredAppOpenRef = useRef(false);
 
@@ -304,6 +306,8 @@ export const LandingPage: React.FC = () => {
             userAudioLevel={userAudioLevel}
             revaAudioLevel={revaAudioLevel}
             emotionalState={diagnostics.personality?.revaEmotions}
+            energyFlareEnabled={energyFlareEnabled}
+            characterTestAnimation={characterTestAnimation}
             onCharacterClick={() => {
               if (voiceMode === 'OFF') {
                 setVoiceMode('MANUAL');
@@ -366,6 +370,10 @@ export const LandingPage: React.FC = () => {
         onToggleMusic={toggleMusic}
         onSelectMusicMode={setMusicMode}
         onSetMusicVolume={setMusicVolume}
+        energyFlareEnabled={energyFlareEnabled}
+        onToggleEnergyFlare={() => setEnergyFlareEnabled((prev) => !prev)}
+        characterTestAnimation={characterTestAnimation}
+        onToggleCharacterTestAnimation={() => setCharacterTestAnimation((prev) => !prev)}
       />
 
       {/* Memory Modal Overlay */}
