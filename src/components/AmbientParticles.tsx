@@ -92,19 +92,19 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
       let baseAlpha: number;
       let hasSpike = false;
 
-      if (depth < 0.7) {
-        // Deep background micro-stars (vast majority)
-        size = Math.random() * 0.45 + 0.3;
-        baseAlpha = Math.random() * 0.35 + 0.15;
-      } else if (depth < 0.92) {
-        // Midground stars
-        size = Math.random() * 0.55 + 0.55;
-        baseAlpha = Math.random() * 0.45 + 0.35;
+      if (depth < 0.72) {
+        // Deep background distant micro-stars (vast majority): ultra-soft, low brightness
+        size = Math.random() * 0.35 + 0.25;
+        baseAlpha = Math.random() * 0.22 + 0.08;
+      } else if (depth < 0.93) {
+        // Midground stars: soft natural light
+        size = Math.random() * 0.45 + 0.5;
+        baseAlpha = Math.random() * 0.32 + 0.25;
       } else {
-        // Foreground prominent stars (rare)
-        size = Math.random() * 0.65 + 0.85;
-        baseAlpha = Math.random() * 0.35 + 0.65;
-        hasSpike = Math.random() < 0.22;
+        // Foreground prominent anchor stars (rare): crisp with delicate scintillation
+        size = Math.random() * 0.6 + 0.85;
+        baseAlpha = Math.random() * 0.3 + 0.55;
+        hasSpike = Math.random() < 0.2;
       }
 
       // Realistic stellar spectral classification (O/B blue-white, A pure white, G warm yellow, M faint red/amber)
@@ -112,13 +112,13 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
       let color = '#ffffff';
       let spectralType: RealisticStar['spectralType'] = 'A_WHITE';
 
-      if (colorRoll < 0.45) {
+      if (colorRoll < 0.48) {
         color = '#ffffff';
         spectralType = 'A_WHITE';
-      } else if (colorRoll < 0.72) {
+      } else if (colorRoll < 0.74) {
         color = '#e0f2fe'; // Pale Diamond Blue
         spectralType = 'O_BLUE';
-      } else if (colorRoll < 0.88) {
+      } else if (colorRoll < 0.89) {
         color = '#fef3c7'; // Warm Solar Cream
         spectralType = 'G_WARM';
       } else {
@@ -132,41 +132,42 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
         size,
         depth,
         baseAlpha,
-        twinkleSpeed: Math.random() * 0.012 + 0.003,
+        twinkleSpeed: Math.random() * 0.01 + 0.003,
         twinklePhase: Math.random() * Math.PI * 2,
         color,
         spectralType,
-        vx: (depth * 0.004 + 0.001) * -1,
-        vy: (depth * 0.002 + 0.0008) * -1,
+        vx: (depth * 0.0035 + 0.0008) * -1,
+        vy: (depth * 0.0018 + 0.0006) * -1,
         hasSpike,
       };
     });
 
     // ==========================================
     // REALISTIC SPIRAL GALAXY GAS & DUST GENERATION
-    // Logarithmic spiral distribution with dark dust lanes and soft stellar gas
+    // Logarithmic spiral distribution with dark dust lanes, volumetric gas clouds & subtle absorption
     // ==========================================
     const galaxyGasPockets: GalaxyGasPocket[] = [];
-    const galaxyGasCount = 180;
+    const galaxyGasCount = 190;
     const gasColors = [
-      'rgba(245, 235, 255, 0.07)', // Stellar core haze
-      'rgba(216, 180, 254, 0.05)', // Ionized hydrogen / soft violet
-      'rgba(167, 139, 250, 0.04)', // Interstellar medium
-      'rgba(129, 140, 248, 0.035)', // Distant blue arm fringe
-      'rgba(254, 243, 199, 0.045)', // Warm stellar cluster
+      'rgba(245, 235, 255, 0.06)', // Stellar core haze
+      'rgba(216, 180, 254, 0.045)', // Ionized hydrogen / soft violet
+      'rgba(167, 139, 250, 0.035)', // Interstellar medium
+      'rgba(129, 140, 248, 0.03)', // Distant blue arm fringe
+      'rgba(254, 243, 199, 0.04)', // Warm stellar cluster
+      'rgba(76, 29, 149, 0.035)', // Deep violet absorption gas
     ];
 
     for (let i = 0; i < galaxyGasCount; i++) {
       const armIndex = i % 2;
-      const distRatio = Math.pow(Math.random(), 0.9);
-      const angleOffset = (Math.random() - 0.5) * 0.35;
-      const radius = 12 + Math.random() * 22;
+      const distRatio = Math.pow(Math.random(), 0.85);
+      const angleOffset = (Math.random() - 0.5) * 0.38;
+      const radius = 14 + Math.random() * 26;
       galaxyGasPockets.push({
         armIndex,
         distRatio,
         angleOffset,
         radius,
-        alpha: Math.random() * 0.35 + 0.1,
+        alpha: Math.random() * 0.3 + 0.08,
         color: gasColors[Math.floor(Math.random() * gasColors.length)],
         speed: 0.98 + Math.random() * 0.04,
       });
@@ -280,40 +281,53 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
         sunX, sunY, 20,
         width * 0.5, height * 0.55, Math.max(width, height) * 0.95
       );
-      spaceGrad.addColorStop(0, '#0a0318'); // Near sun/galaxy illumination
-      spaceGrad.addColorStop(0.28, '#04010d'); // Deep cosmic violet
-      spaceGrad.addColorStop(0.65, '#020106'); // Interstellar shadow
+      spaceGrad.addColorStop(0, '#090315'); // Near sun/galaxy illumination
+      spaceGrad.addColorStop(0.25, '#04010b'); // Deep cosmic violet
+      spaceGrad.addColorStop(0.62, '#020105'); // Interstellar shadow
       spaceGrad.addColorStop(1, '#000000'); // Pure space void
       ctx.fillStyle = spaceGrad;
       ctx.fillRect(0, 0, width, height);
 
       // ==========================================
       // 2. SOFT VOLUMETRIC INTERSTELLAR ABSORPTION & EMISSION NEBULA
-      // Soft, diffuse, photographic gas clouds with light falloff instead of saturated neon streaks
+      // Layered subtle gas clouds with light falloff providing 3D depth without extra brightness
       // ==========================================
       ctx.save();
 
       // Soft diagonal cosmic dust lane crossing the background
-      const nebulaGrad = ctx.createLinearGradient(0, height * 0.7, width, height * 0.25);
+      const nebulaGrad = ctx.createLinearGradient(0, height * 0.72, width, height * 0.22);
       nebulaGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      nebulaGrad.addColorStop(0.2, 'rgba(24, 6, 42, 0.08)');
-      nebulaGrad.addColorStop(0.48, 'rgba(48, 14, 82, 0.11)');
-      nebulaGrad.addColorStop(0.72, 'rgba(15, 23, 42, 0.09)');
-      nebulaGrad.addColorStop(0.85, 'rgba(45, 24, 16, 0.07)');
+      nebulaGrad.addColorStop(0.22, 'rgba(20, 5, 36, 0.07)');
+      nebulaGrad.addColorStop(0.48, 'rgba(40, 12, 70, 0.09)');
+      nebulaGrad.addColorStop(0.72, 'rgba(12, 18, 36, 0.075)');
+      nebulaGrad.addColorStop(0.86, 'rgba(38, 20, 14, 0.055)');
       nebulaGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = nebulaGrad;
       ctx.fillRect(0, 0, width, height);
 
       // Distant soft emission cloud behind the upper right horizon
       const emissionGlow = ctx.createRadialGradient(
-        sunX + width * 0.04, sunY - height * 0.05, 40,
-        sunX + width * 0.04, sunY - height * 0.05, Math.min(width, height) * 0.45
+        sunX + width * 0.04, sunY - height * 0.05, 30,
+        sunX + width * 0.04, sunY - height * 0.05, Math.min(width, height) * 0.48
       );
-      emissionGlow.addColorStop(0, 'rgba(109, 40, 217, 0.08)');
-      emissionGlow.addColorStop(0.4, 'rgba(67, 24, 120, 0.045)');
-      emissionGlow.addColorStop(0.8, 'rgba(15, 23, 42, 0.02)');
+      emissionGlow.addColorStop(0, 'rgba(99, 36, 196, 0.065)');
+      emissionGlow.addColorStop(0.38, 'rgba(58, 20, 104, 0.038)');
+      emissionGlow.addColorStop(0.75, 'rgba(15, 23, 42, 0.015)');
       emissionGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = emissionGlow;
+      ctx.fillRect(0, 0, width, height);
+
+      // Radial gradient depth mask applied directly over nebula clouds:
+      // Darkens the center region to increase perceived distance from the foreground, while edges softly fade into deep black space
+      const nebulaRadialMask = ctx.createRadialGradient(
+        width * 0.5, height * 0.5, 40,
+        width * 0.5, height * 0.5, Math.max(width, height) * 0.75
+      );
+      nebulaRadialMask.addColorStop(0, 'rgba(2, 1, 5, 0.55)'); // Center: darkened for separation and deep distance
+      nebulaRadialMask.addColorStop(0.3, 'rgba(3, 1, 8, 0.35)'); // Mid-inner transition
+      nebulaRadialMask.addColorStop(0.65, 'rgba(10, 3, 20, 0.08)'); // Subtle celestial luminescence band
+      nebulaRadialMask.addColorStop(1, 'rgba(0, 0, 0, 0.7)'); // Outer periphery: seamlessly blends into pure black void
+      ctx.fillStyle = nebulaRadialMask;
       ctx.fillRect(0, 0, width, height);
 
       ctx.restore();

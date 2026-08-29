@@ -26,11 +26,11 @@ export const MoodIndicator: React.FC<MoodIndicatorProps> = ({
       id="reva-mood-indicator-btn"
       onClick={onClick}
       title="REVA Emotional Core & Mood"
-      className="group relative flex items-center justify-between gap-4 px-4 py-3.5 w-full min-w-[200px] sm:min-w-[220px] rounded-[22px] bg-[#0c051a]/80 border border-purple-900/50 hover:border-purple-500/60 backdrop-blur-2xl transition-all duration-300 shadow-[0_4px_24px_rgba(0,0,0,0.4)] hover:shadow-[0_0_20px_rgba(168,85,247,0.25)] cursor-pointer select-none text-left"
+      className="group relative flex items-center justify-between gap-4 px-4 py-3.5 w-full min-w-[200px] sm:min-w-[220px] rounded-[22px] bg-transparent border border-purple-500/20 hover:border-purple-500/40 backdrop-blur-none transition-all duration-300 shadow-none cursor-pointer select-none text-left"
     >
       <div className="flex items-center gap-3.5">
-        {/* Heart Icon in Glowing Squircle */}
-        <div className="p-2 rounded-xl bg-purple-950/60 border border-purple-600/40 text-purple-300 group-hover:text-purple-100 shadow-[0_0_12px_rgba(168,85,247,0.3)] transition-colors">
+        {/* Heart Icon in Squircle */}
+        <div className="p-2 rounded-xl bg-transparent border border-purple-500/30 text-purple-300 group-hover:text-purple-100 shadow-[0_0_10px_rgba(168,85,247,0.2)] transition-colors">
           <Heart className="w-5 h-5 text-purple-300 drop-shadow-[0_0_6px_rgba(192,132,252,0.8)]" />
         </div>
 

@@ -97,64 +97,59 @@ export const MicrophoneControl: React.FC<MicrophoneControlProps> = ({
       id="reva-right-mic-control"
       className="flex flex-col items-center justify-center select-none z-20"
     >
-      {/* Outer Holographic Glass Rings Container */}
-      <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 flex items-center justify-center">
-        {/* Outermost Precision Ring */}
+      {/* Clean, Normal Circular Microphone Control Container */}
+      <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
+        {/* Soft Ambient Audio Reactive Glow */}
         <div
-          className="absolute inset-0 rounded-full border border-purple-500/20 transition-all duration-300 pointer-events-none"
+          className="absolute inset-0 rounded-full bg-purple-600/20 blur-lg transition-all duration-300 pointer-events-none"
+          style={{
+            opacity: isVoiceOff ? 0 : 0.4 + audioLevel * 0.6,
+            transform: `scale(${1 + (isVoiceOff ? 0 : audioLevel * 0.15)})`,
+          }}
+        />
+
+        {/* Outer Clean Circular Border Ring */}
+        <div
+          className="absolute inset-0 rounded-full border border-purple-500/30 transition-all duration-300 pointer-events-none"
           style={{
             transform: `scale(${1 + (isVoiceOff ? 0 : audioLevel * 0.08)})`,
-            boxShadow: isVoiceOff
-              ? 'none'
-              : `0 0 ${10 + audioLevel * 14}px rgba(168, 85, 247, ${0.15 + audioLevel * 0.2})`,
+            borderColor: isSpeaking
+              ? 'rgba(192, 132, 252, 0.6)'
+              : isListening
+              ? 'rgba(168, 85, 247, 0.45)'
+              : 'rgba(147, 51, 234, 0.25)',
           }}
         />
 
-        {/* Middle Vibrant Purple Ring with Neon Glow */}
-        <div
-          className="absolute w-24 h-24 sm:w-26 sm:h-26 md:w-28 md:h-28 rounded-full border border-purple-400/70 transition-all duration-200 pointer-events-none shadow-[0_0_12px_rgba(192,132,252,0.45)]"
-          style={{
-            transform: `scale(${1 + (isVoiceOff ? 0 : audioLevel * 0.06)})`,
-          }}
-        />
-
-        {/* Inner Subtle Glass Ring */}
-        <div
-          className="absolute w-18 h-18 sm:w-20 sm:h-20 md:w-22 md:h-22 rounded-full border border-purple-300/30 transition-all duration-150 pointer-events-none"
-          style={{
-            boxShadow: isVoiceOff
-              ? 'none'
-              : `0 0 8px rgba(216, 180, 254, ${0.2 + audioLevel * 0.2})`,
-          }}
-        />
-
-        {/* Center Microphone Button: Transparent Holographic Orb */}
+        {/* Center Primary Microphone Action Button */}
         <button
           id="reva-circular-mic-button"
           onClick={handleClick}
           title="Microphone (Click to talk or mute)"
-          className={`relative z-10 w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 active:scale-95 bg-transparent ${
+          className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-95 shadow-lg backdrop-blur-md ${
             isVoiceOff
-              ? 'text-zinc-500 border border-zinc-700/30 hover:text-zinc-300'
+              ? 'text-zinc-500 border border-zinc-700/50 bg-zinc-900/60 hover:text-zinc-300 hover:border-zinc-600'
               : isDenied || isMuted
-              ? 'text-rose-300 border border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.3)]'
+              ? 'text-rose-200 border border-rose-500/60 bg-rose-950/50 shadow-[0_0_20px_rgba(244,63,94,0.3)] hover:bg-rose-900/60'
               : isWakeListening
-              ? 'text-pink-200 border border-pink-400/50 shadow-[0_0_15px_rgba(236,72,153,0.35)]'
-              : 'text-purple-100 border border-purple-400/50 shadow-[0_0_16px_rgba(168,85,247,0.35)] hover:border-purple-300 hover:shadow-[0_0_20px_rgba(192,132,252,0.5)]'
+              ? 'text-pink-100 border border-pink-400/60 bg-pink-950/50 shadow-[0_0_20px_rgba(236,72,153,0.35)] hover:bg-pink-900/60'
+              : isSpeaking
+              ? 'text-purple-50 border border-purple-300/80 bg-purple-900/70 shadow-[0_0_25px_rgba(168,85,247,0.5)] hover:bg-purple-800/80'
+              : 'text-purple-100 border border-purple-400/50 bg-[#16062a]/80 shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:border-purple-300 hover:bg-purple-950/90 hover:shadow-[0_0_25px_rgba(168,85,247,0.45)]'
           }`}
         >
           {isVoiceOff ? (
-            <MicOff className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-500" />
+            <MicOff className="w-6 h-6 text-zinc-500" />
           ) : isDenied ? (
-            <ShieldAlert className="w-5 h-5 sm:w-6 sm:h-6 text-rose-400 animate-pulse" />
+            <ShieldAlert className="w-6 h-6 text-rose-300 animate-pulse" />
           ) : isMuted ? (
-            <MicOff className="w-5 h-5 sm:w-6 sm:h-6 text-rose-300" />
+            <MicOff className="w-6 h-6 text-rose-200" />
           ) : isSpeaking ? (
-            <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-100 drop-shadow-[0_0_8px_rgba(216,180,254,0.9)]" />
+            <Volume2 className="w-6 h-6 text-purple-100 drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" />
           ) : isConnecting ? (
-            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-purple-300" />
+            <Sparkles className="w-6 h-6 animate-spin text-purple-200" />
           ) : (
-            <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-purple-100 drop-shadow-[0_0_8px_rgba(216,180,254,0.9)]" />
+            <Mic className="w-6 h-6 text-purple-100 drop-shadow-[0_0_8px_rgba(216,180,254,0.6)]" />
           )}
         </button>
       </div>

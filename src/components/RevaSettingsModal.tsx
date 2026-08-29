@@ -531,6 +531,31 @@ export const RevaSettingsModal: React.FC<RevaSettingsModalProps> = ({
               </div>
 
               <div className="p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-300 font-medium flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Google Search Grounding
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-900/60 text-purple-200 border border-purple-700/40">
+                    gemini-2.5-flash + googleSearch
+                  </span>
+                </div>
+                <p className="text-zinc-400 text-[11px] leading-relaxed">
+                  Real-time factual grounding using Google Search data. REVA automatically verifies live facts, current events, recent news, release dates, and documentation URLs with grounded citations.
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-purple-900/40">
+                  <div>
+                    <span className="text-zinc-500 block">Tool Provider</span>
+                    <span className="text-emerald-300 font-medium">googleSearch (Native)</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block">Status</span>
+                    <span className="text-zinc-200">Active & Ready</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-purple-950/30 border border-purple-900/40 rounded-xl space-y-2">
                 <span className="text-zinc-300 font-medium">System Environment</span>
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div>

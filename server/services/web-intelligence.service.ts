@@ -124,13 +124,25 @@ Guidelines:
 3. If this asks for an official website or documentation, clearly identify the primary official URL.
 4. Keep the factual answer clear and concise for speech synthesis. Do not make up facts.`;
 
-      const response = await this.ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          tools: [{ googleSearch: {} }],
-        },
-      });
+      let response;
+      try {
+        response = await this.ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+          config: {
+            tools: [{ googleSearch: {} }],
+          },
+        });
+      } catch (genErr: any) {
+        console.warn('[REVA][WEB] gemini-2.5-flash attempt returned:', genErr?.message, 'Falling back to gemini-3.7-flash');
+        response = await this.ai.models.generateContent({
+          model: 'gemini-3.7-flash',
+          contents: prompt,
+          config: {
+            tools: [{ googleSearch: {} }],
+          },
+        });
+      }
 
       const responseText = response.text || '';
       const candidate = response.candidates?.[0] as any;

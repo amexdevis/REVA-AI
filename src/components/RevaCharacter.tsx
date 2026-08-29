@@ -86,77 +86,135 @@ export const RevaCharacter: React.FC<RevaCharacterProps> = ({
     return () => clearInterval(interval);
   }, [emotionalState]);
 
-  // 3. Dynamic Cosmic Time & Directional Ambient Space Lighting
-  const [lightPhase, setLightPhase] = useState(0);
+  // 3. Dynamic Cosmic Time & Environmental Space Lighting Engine
+  // Computes synchronized astronomical light vectors matching the moving space background:
+  // - Rotating Galaxy: slow orbital purple rim shifts on hair, shoulders, arms, and clothing
+  // - Moving Sun: slow shifting solar angle with warm golden side grazing and cooler opposing shadow
+  // - Orbiting Planets: barely noticeable ambient illumination shift when planetary bodies drift near
+  // - Rising Purple Energy Flare: brief gentle purple reflection swell as the flare ascends past REVA
+  // - Holographic Platform: upward violet bounce on shoes, legs, and lower body pulsing smoothly with platform resonance
+  const [spaceTime, setSpaceTime] = useState({
+    galaxyAngle: 0,
+    sunAngle: 0,
+    planetCycle: 0,
+    flarePhase: 0,
+    platformPulse: 0,
+  });
 
   useEffect(() => {
     let animId: number;
-    let startTime = performance.now();
+    const startTime = performance.now();
 
-    const updateLight = () => {
-      const elapsed = (performance.now() - startTime) * 0.00018;
-      setLightPhase(elapsed);
-      animId = requestAnimationFrame(updateLight);
+    const updateSpaceLight = (now: number) => {
+      const elapsedSeconds = (now - startTime) / 1000;
+
+      // 1. Galaxy rotation match: ~0.00025 rad/frame (approx 250s full cycle)
+      const galaxyAngle = elapsedSeconds * 0.025;
+
+      // 2. Distant Sun orbit match: long continuous solar arc (~15 min cycle = ~900s)
+      const sunAngle = elapsedSeconds * 0.007;
+
+      // 3. Orbiting planets match: slow celestial drift (~120s cycle)
+      const planetCycle = elapsedSeconds * 0.052;
+
+      // 4. Purple Energy Flare match: 4.8s total cycle (3.0s ascending rise + 1.8s pause)
+      const flareProgress = (elapsedSeconds % 4.8) / 4.8;
+      // Flare reflection factor (highest when flare is traversing body between 0.15 and 0.55)
+      let flareReflection = 0;
+      if (flareProgress <= 0.625) {
+        const riseFactor = flareProgress / 0.625;
+        // Peak reflection at torso (riseFactor ~0.4)
+        flareReflection = Math.sin(riseFactor * Math.PI) * 0.065;
+      }
+
+      // 5. Holographic Platform energy oscillation (~4.0s pulse)
+      const platformPulse = Math.sin(elapsedSeconds * 1.57) * 0.5 + 0.5;
+
+      setSpaceTime({
+        galaxyAngle,
+        sunAngle,
+        planetCycle,
+        flarePhase: flareReflection,
+        platformPulse,
+      });
+
+      animId = requestAnimationFrame(updateSpaceLight);
     };
 
-    animId = requestAnimationFrame(updateLight);
+    animId = requestAnimationFrame(updateSpaceLight);
     return () => cancelAnimationFrame(animId);
   }, []);
 
   // Compute realistic multi-directional environmental light integration
-  // - Upper-Right: Soft warm sunlight reflecting off right hair, shoulder, and arm silhouette
-  // - Upper-Left: Subtle deep violet space rim light along left hair and silhouette
-  // - Ambient Mid: Cool blue-violet cosmic fill from spiral galaxy
-  // - Base / Pedestal: Soft upward violet platform reflection fading off towards upper torso
+  // 1. Galaxy Light: Slowly shifting soft purple rim along hair, shoulders, arms, and clothing edges
+  // 2. Solar Light: Slow shifting warm sunlight angle with subtle color temperature modulation
+  // 3. Planet Ambient Light: Barely noticeable soft fill illumination as celestial bodies pass
+  // 4. Energy Flare Reflection: Smooth, brief illumination swell as the flare wave sweeps past
+  // 5. Platform Uplight: Grounded, soft upward violet gradient on shoes, legs, and lower body
   const characterFilter = useMemo(() => {
-    // Micro-shifts matching celestial motion
-    const sunOffsetX = 3.5 + Math.sin(lightPhase) * 0.8;
-    const sunOffsetY = -2.5 + Math.cos(lightPhase * 0.8) * 0.6;
-    const galaxyIntensity = 0.22 + Math.sin(lightPhase * 1.4) * 0.03;
+    const { galaxyAngle, sunAngle, planetCycle, flarePhase, platformPulse } = spaceTime;
+
+    // Moving Sun directional vector: shifts horizontally and vertically across the upper right
+    const sunDirX = 3.0 + Math.sin(sunAngle) * 1.4;
+    const sunDirY = -2.2 + Math.cos(sunAngle * 0.8) * 0.9;
+    const sunWarmth = 0.16 + Math.sin(sunAngle * 1.1) * 0.035;
+
+    // Rotating Galaxy rim vector: slowly rotates around the silhouette edges
+    const galaxyRimX = -2.8 + Math.cos(galaxyAngle) * 1.2;
+    const galaxyRimY = -1.0 + Math.sin(galaxyAngle * 0.9) * 1.1;
+    const galaxyIntensity = 0.22 + Math.sin(galaxyAngle * 1.4) * 0.04 + flarePhase;
+
+    // Passing Planet subtle ambient fill variation
+    const planetAmbientFill = 0.10 + Math.sin(planetCycle) * 0.025;
+
+    // Platform upward reflection
+    const platformBounceIntensity = 0.18 + platformPulse * 0.05 + flarePhase * 0.5;
 
     if (isOffline) {
       return 'drop-shadow(0 0 8px rgba(107, 33, 168, 0.2)) brightness(0.92) contrast(1.02)';
     }
 
     if (isSpeaking) {
-      const radius = 12 + revaAudioLevel * 20;
+      const radius = 12 + revaAudioLevel * 18;
       return [
-        `drop-shadow(-3.5px 0 9px rgba(168, 85, 247, ${0.32 + revaAudioLevel * 0.15}))`, // Violet space rim
-        `drop-shadow(${sunOffsetX}px ${sunOffsetY}px 11px rgba(254, 243, 199, 0.18))`, // Warm sun bounce
-        `drop-shadow(-2px -2px 14px rgba(129, 140, 248, 0.14))`, // Cool cosmic galaxy fill
-        `drop-shadow(0 7px ${radius}px rgba(192, 132, 252, ${0.28 + revaAudioLevel * 0.2}))`, // Upward platform bounce
+        `drop-shadow(${galaxyRimX}px ${galaxyRimY}px 8px rgba(168, 85, 247, ${galaxyIntensity + 0.10 + revaAudioLevel * 0.12}))`, // 1. Moving galaxy rim
+        `drop-shadow(${sunDirX}px ${sunDirY}px 8.5px rgba(254, 243, 199, ${sunWarmth + 0.04}))`, // 2. Moving sun grazing
+        `drop-shadow(-4px -2px 16px rgba(139, 92, 246, ${planetAmbientFill + 0.04}))`, // 3. Passing planet diffuse fill
+        `drop-shadow(0 9px ${radius}px rgba(192, 132, 252, ${platformBounceIntensity + 0.10 + revaAudioLevel * 0.16}))`, // 4. Platform upward bounce
         `brightness(1.02) contrast(1.02)`,
       ].join(' ');
     }
 
     if (isListening) {
-      const radius = 10 + userAudioLevel * 16;
+      const radius = 10 + userAudioLevel * 14;
       return [
-        `drop-shadow(-3.5px 0 8px rgba(147, 51, 234, ${0.28 + userAudioLevel * 0.12}))`,
-        `drop-shadow(${sunOffsetX}px ${sunOffsetY}px 10px rgba(254, 243, 199, 0.16))`,
-        `drop-shadow(-2px -2px 12px rgba(129, 140, 248, 0.12))`,
-        `drop-shadow(0 7px ${radius}px rgba(192, 132, 252, ${0.24 + userAudioLevel * 0.15}))`,
-        `brightness(1.01)`,
+        `drop-shadow(${galaxyRimX}px ${galaxyRimY}px 7px rgba(168, 85, 247, ${galaxyIntensity + 0.05 + userAudioLevel * 0.10}))`,
+        `drop-shadow(${sunDirX}px ${sunDirY}px 8px rgba(254, 243, 199, ${sunWarmth + 0.02}))`,
+        `drop-shadow(-4px -2px 14px rgba(139, 92, 246, ${planetAmbientFill + 0.02}))`,
+        `drop-shadow(0 9px ${radius}px rgba(192, 132, 252, ${platformBounceIntensity + 0.06 + userAudioLevel * 0.12}))`,
+        `brightness(1.01) contrast(1.01)`,
       ].join(' ');
     }
 
     if (isThinking) {
       return [
-        `drop-shadow(-3.5px 0 8px rgba(168, 85, 247, 0.28))`,
-        `drop-shadow(${sunOffsetX}px ${sunOffsetY}px 9px rgba(254, 243, 199, 0.15))`,
-        `drop-shadow(-2px -2px 12px rgba(129, 140, 248, 0.12))`,
-        `drop-shadow(0 7px 12px rgba(216, 180, 254, 0.22))`,
+        `drop-shadow(${galaxyRimX}px ${galaxyRimY}px 7px rgba(168, 85, 247, ${galaxyIntensity + 0.04}))`,
+        `drop-shadow(${sunDirX}px ${sunDirY}px 8px rgba(254, 243, 199, ${sunWarmth}))`,
+        `drop-shadow(-4px -2px 14px rgba(139, 92, 246, ${planetAmbientFill}))`,
+        `drop-shadow(0 9px 12px rgba(216, 180, 254, ${platformBounceIntensity + 0.04}))`,
+        `brightness(1.01)`,
       ].join(' ');
     }
 
-    // Default Calm Idle: Balanced multi-source cinematic lighting
+    // Default Calm Idle: Cinematic, soft natural space illumination
     return [
-      `drop-shadow(-3.5px 0 8px rgba(147, 51, 234, ${galaxyIntensity}))`, // Violet space rim
-      `drop-shadow(${sunOffsetX}px ${sunOffsetY}px 9px rgba(254, 243, 199, 0.14))`, // Gentle warm sun
-      `drop-shadow(-2px -2px 12px rgba(129, 140, 248, 0.11))`, // Cool cosmic fill
-      `drop-shadow(0 7px 10px rgba(168, 85, 247, 0.18))`, // Ground platform bounce
+      `drop-shadow(${galaxyRimX}px ${galaxyRimY}px 6.5px rgba(168, 85, 247, ${galaxyIntensity}))`, // 1. Moving galaxy rim
+      `drop-shadow(${sunDirX}px ${sunDirY}px 7.5px rgba(254, 243, 199, ${sunWarmth}))`, // 2. Moving sun grazing
+      `drop-shadow(-4px -2px 14px rgba(139, 92, 246, ${planetAmbientFill}))`, // 3. Passing planet diffuse fill
+      `drop-shadow(0 8px 11px rgba(192, 132, 252, ${platformBounceIntensity}))`, // 4. Platform upward bounce
+      `contrast(1.015) brightness(1.01)`,
     ].join(' ');
-  }, [isOffline, isSpeaking, isListening, isThinking, revaAudioLevel, userAudioLevel, lightPhase]);
+  }, [isOffline, isSpeaking, isListening, isThinking, revaAudioLevel, userAudioLevel, spaceTime]);
 
   return (
     <div
@@ -182,7 +240,7 @@ export const RevaCharacter: React.FC<RevaCharacterProps> = ({
 
       {/* 2. Full-Body Character: Pure clean render with biological breathing and posture */}
       <div
-        className={`relative z-10 h-[56vh] sm:h-[60vh] md:h-[63vh] max-h-[68vh] min-h-[420px] w-auto flex items-center justify-center transition-all duration-500 ${
+        className={`relative z-10 h-[64vh] sm:h-[68vh] md:h-[72vh] lg:h-[74vh] max-h-[76vh] min-h-[480px] w-auto flex items-center justify-center transition-all duration-500 ${
           isOffline ? 'opacity-85' : 'opacity-100 animate-reva-breathe animate-reva-sway'
         } ${isListening ? '-translate-y-0.5' : 'translate-y-0'} ${
           characterTestAnimation ? 'animate-character-debug' : ''
@@ -199,14 +257,46 @@ export const RevaCharacter: React.FC<RevaCharacterProps> = ({
           }}
         />
 
-        {/* Soft upward platform light reflection layer at feet/lower body with natural falloff */}
+        {/* Soft upward platform light reflection layer across shoes, legs, and shorts with natural quadratic fall-off */}
         <div
-          className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-purple-500/10 via-purple-600/04 to-transparent pointer-events-none rounded-b-xl"
+          className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-purple-400/18 via-purple-600/07 via-purple-900/02 to-transparent pointer-events-none rounded-b-xl transition-opacity duration-500"
           style={{
             mixBlendMode: 'screen',
-            opacity: isSpeaking ? 0.9 : isListening ? 0.75 : 0.6,
+            opacity: (isSpeaking ? 0.85 : isListening ? 0.72 : 0.58) + spaceTime.platformPulse * 0.08 + spaceTime.flarePhase * 0.4,
           }}
         />
+
+        {/* Delicate base contact illumination on shoes from holographic platform rim */}
+        <div
+          className="absolute inset-x-[15%] bottom-0 h-[8%] bg-gradient-to-t from-purple-300/22 via-purple-500/08 to-transparent pointer-events-none blur-[2px] transition-opacity duration-300"
+          style={{
+            mixBlendMode: 'screen',
+            opacity: isOffline ? 0.2 : 0.72 + spaceTime.platformPulse * 0.08,
+          }}
+        />
+
+        {/* Permanent Creator Tattoo on Upper/Back of Hand: "Keshav K." */}
+        <div
+          id="reva-hand-tattoo"
+          className="absolute top-[49.2%] left-[62.2%] pointer-events-none select-none z-20"
+          style={{
+            transform: 'translate(-50%, -50%) rotate(15deg)',
+          }}
+          aria-label="Tattoo: Keshav K."
+        >
+          <span
+            className="block text-[12.5px] sm:text-[13.5px] md:text-[14.5px] lg:text-[15.5px] leading-none tracking-tight font-bold text-[#140b20] antialiased"
+            style={{
+              fontFamily: "'Dancing Script', 'Caveat', 'Alex Brush', cursive",
+              mixBlendMode: 'multiply',
+              filter: 'drop-shadow(0 0 0.35px rgba(20, 11, 32, 0.6))',
+              textShadow: '0 0 0.35px rgba(20, 11, 32, 0.4)',
+              opacity: 0.95,
+            }}
+          >
+            Keshav K.
+          </span>
+        </div>
 
         {/* 3. Rising Purple Energy Flare Effect (Feet to Head) */}
         <RevaEnergyFlare isOffline={isOffline} enabled={energyFlareEnabled} />

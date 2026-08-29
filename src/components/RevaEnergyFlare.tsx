@@ -26,14 +26,13 @@ export const RevaEnergyFlare: React.FC<RevaEnergyFlareProps> = ({
   isOffline,
   enabled = true,
 }) => {
-  if (isOffline || !enabled) return null;
-
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 340, height: 600 });
 
   // Update canvas sizing matching REVA's container
   useEffect(() => {
+    if (isOffline || !enabled) return;
     const updateSize = () => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
@@ -52,6 +51,7 @@ export const RevaEnergyFlare: React.FC<RevaEnergyFlareProps> = ({
   }, []);
 
   useEffect(() => {
+    if (isOffline || !enabled) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -219,6 +219,10 @@ export const RevaEnergyFlare: React.FC<RevaEnergyFlareProps> = ({
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
   }, [dimensions, enabled, isOffline]);
+
+  if (isOffline || !enabled) {
+    return null;
+  }
 
   return (
     <div

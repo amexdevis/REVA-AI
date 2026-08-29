@@ -201,6 +201,12 @@ export const LandingPage: React.FC = () => {
         emotionalState={diagnostics.personality?.revaEmotions}
       />
 
+      {/* Atmospheric Depth Haze Overlay: Separates foreground character from distant cosmic background */}
+      <div
+        id="reva-atmospheric-depth-haze"
+        className="absolute inset-0 w-full h-full pointer-events-none z-[1] bg-gradient-to-t from-[#150428]/35 via-[#1c0634]/18 to-[#0a0216]/10 mix-blend-screen transition-opacity duration-700"
+      />
+
       {/* 2. Top Header HUD */}
       <header className="relative z-30 w-full px-8 lg:px-12 pt-6 flex items-center justify-between">
         {/* Top-Left: REVA AI COMPANION */}
@@ -293,7 +299,7 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* Center: Large Full-Body REVA Character with Holographic Pedestal at her feet */}
-        <div className="pointer-events-auto absolute left-1/2 -translate-x-1/2 bottom-[5%] sm:bottom-[6%] md:bottom-[7%] flex flex-col items-center justify-end z-10">
+        <div className="pointer-events-auto absolute left-1/2 -translate-x-1/2 bottom-[2.5%] sm:bottom-[3%] md:bottom-[3.5%] flex flex-col items-center justify-end z-10">
           <HolographicPlatform
             sessionState={sessionState}
             userAudioLevel={userAudioLevel}
@@ -319,10 +325,10 @@ export const LandingPage: React.FC = () => {
           />
         </div>
 
-        {/* Right Section: Large Circular Holographic Microphone Control */}
-        <div className="pointer-events-auto z-20 flex flex-col items-end justify-center h-full py-6 pr-2 translate-y-10 sm:translate-y-14">
-          {/* Centered Large Circular Holographic Microphone */}
-          <div className="flex items-center justify-center">
+        {/* Right Section: Microphone Control & Mood Indicator */}
+        <div className="pointer-events-auto z-20 flex flex-col items-end justify-between h-full py-2 -mr-2 sm:-mr-4 md:-mr-6">
+          {/* Top / Center: Microphone Control */}
+          <div className="flex-1 flex items-center justify-center w-full">
             <MicrophoneControl
               sessionState={sessionState}
               micState={micState}
@@ -335,6 +341,14 @@ export const LandingPage: React.FC = () => {
               onStartSession={startVoiceSession}
               onInterrupt={handleInterrupt}
               onSelectMode={setVoiceMode}
+            />
+          </div>
+
+          {/* Bottom Right: Mood Card matching Left Memory Card */}
+          <div className="flex flex-col gap-3 w-full items-end">
+            <MoodIndicator
+              personality={diagnostics.personality}
+              onClick={() => setIsSettingsOpen(true)}
             />
           </div>
         </div>
