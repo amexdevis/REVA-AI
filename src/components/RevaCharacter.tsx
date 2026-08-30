@@ -20,7 +20,7 @@ interface RevaCharacterProps {
   characterTestAnimation?: boolean;
 }
 
-export const RevaCharacter: React.FC<RevaCharacterProps> = ({
+const RevaCharacterComponent: React.FC<RevaCharacterProps> = ({
   sessionState,
   userAudioLevel,
   revaAudioLevel,
@@ -325,3 +325,5 @@ export const RevaCharacter: React.FC<RevaCharacterProps> = ({
     </div>
   );
 };
+
+export const RevaCharacter = React.memo(RevaCharacterComponent);

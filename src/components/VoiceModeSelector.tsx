@@ -17,7 +17,7 @@ interface VoiceModeSelectorProps {
   compact?: boolean;
 }
 
-export const VoiceModeSelector: React.FC<VoiceModeSelectorProps> = ({
+const VoiceModeSelectorComponent: React.FC<VoiceModeSelectorProps> = ({
   voiceMode,
   machineState,
   wakeWordStatus,
@@ -97,3 +97,5 @@ export const VoiceModeSelector: React.FC<VoiceModeSelectorProps> = ({
     </div>
   );
 };
+
+export const VoiceModeSelector = React.memo(VoiceModeSelectorComponent);

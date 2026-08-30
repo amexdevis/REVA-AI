@@ -22,7 +22,7 @@ interface PlatformSpark {
   delay: number;
 }
 
-export const HolographicPlatform: React.FC<HolographicPlatformProps> = ({
+const HolographicPlatformComponent: React.FC<HolographicPlatformProps> = ({
   sessionState,
   userAudioLevel,
   revaAudioLevel,
@@ -130,3 +130,5 @@ export const HolographicPlatform: React.FC<HolographicPlatformProps> = ({
     </div>
   );
 };
+
+export const HolographicPlatform = React.memo(HolographicPlatformComponent);

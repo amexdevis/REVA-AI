@@ -81,6 +81,8 @@ export function useRevaVoice(options?: {
   });
 
   // Active instances refs
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
   const wsRef = useRef<WebSocket | null>(null);
   const recorderRef = useRef<AudioRecorder | null>(null);
   const playerRef = useRef<AudioPlaybackManager | null>(null);
@@ -378,8 +380,8 @@ export function useRevaVoice(options?: {
                 lastEvent: 'MEMORY_DATABASE_CHANGED',
               });
             }
-            if (options?.onMemoryUpdated) {
-              options.onMemoryUpdated();
+            if (optionsRef.current?.onMemoryUpdated) {
+              optionsRef.current.onMemoryUpdated();
             }
             break;
 
@@ -389,8 +391,8 @@ export function useRevaVoice(options?: {
                 proactive: msg.proactive,
                 lastEvent: 'PROACTIVE_DIAGNOSTICS_UPDATED',
               });
-              if (options?.onProactiveUpdated) {
-                options.onProactiveUpdated(msg.proactive);
+              if (optionsRef.current?.onProactiveUpdated) {
+                optionsRef.current.onProactiveUpdated(msg.proactive);
               }
             }
             break;
@@ -414,8 +416,8 @@ export function useRevaVoice(options?: {
           case 'TOOL_EXECUTED':
             if (msg.toolResult) {
               updateDiagnostics({ lastEvent: `TOOL_EXECUTED_${msg.toolResult.tool}` });
-              if (options?.onToolExecuted) {
-                options.onToolExecuted(msg.toolResult);
+              if (optionsRef.current?.onToolExecuted) {
+                optionsRef.current.onToolExecuted(msg.toolResult);
               }
             }
             break;
@@ -423,8 +425,8 @@ export function useRevaVoice(options?: {
           case 'TIMER_RING':
             if (msg.timer) {
               updateDiagnostics({ lastEvent: `TIMER_RING_${msg.timer.label}` });
-              if (options?.onTimerRing) {
-                options.onTimerRing(msg.timer);
+              if (optionsRef.current?.onTimerRing) {
+                optionsRef.current.onTimerRing(msg.timer);
               }
             }
             break;
@@ -432,8 +434,8 @@ export function useRevaVoice(options?: {
           case 'OPEN_URL':
             if (msg.url) {
               updateDiagnostics({ lastEvent: `OPEN_URL_${msg.url}` });
-              if (options?.onOpenUrl) {
-                options.onOpenUrl(msg.url);
+              if (optionsRef.current?.onOpenUrl) {
+                optionsRef.current.onOpenUrl(msg.url);
               }
             }
             break;
@@ -441,8 +443,8 @@ export function useRevaVoice(options?: {
           case 'CLIPBOARD_SYNC':
             if (typeof msg.text === 'string') {
               updateDiagnostics({ lastEvent: 'CLIPBOARD_SYNC' });
-              if (options?.onClipboardSync) {
-                options.onClipboardSync(msg.text);
+              if (optionsRef.current?.onClipboardSync) {
+                optionsRef.current.onClipboardSync(msg.text);
               }
             }
             break;

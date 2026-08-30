@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRevaVoice } from '../hooks/useRevaVoice.js';
 import { useRevaMemory } from '../hooks/useRevaMemory.js';
 import { useRevaTools } from '../hooks/useRevaTools.js';
@@ -43,6 +43,26 @@ export const LandingPage: React.FC = () => {
     dismissNotification,
   } = useRevaTools();
 
+  const handleMemoryUpdated = useCallback(() => {
+    refreshMemories();
+  }, [refreshMemories]);
+
+  const handleToolExecuted = useCallback((result: any) => {
+    addRealtimeToolResult(result);
+  }, [addRealtimeToolResult]);
+
+  const handleTimerRingCallback = useCallback((timer: any) => {
+    handleTimerRing(timer);
+  }, [handleTimerRing]);
+
+  const handleOpenUrlCallback = useCallback((url: string) => {
+    handleOpenUrl(url);
+  }, [handleOpenUrl]);
+
+  const handleClipboardSyncCallback = useCallback((text: string) => {
+    handleClipboardSync(text);
+  }, [handleClipboardSync]);
+
   const {
     voiceMode,
     machineState,
@@ -63,31 +83,23 @@ export const LandingPage: React.FC = () => {
     sendProactiveSettingsUpdate,
     sendContextSettingsUpdate,
   } = useRevaVoice({
-    onMemoryUpdated: () => {
-      refreshMemories();
-    },
-    onToolExecuted: (result) => {
-      addRealtimeToolResult(result);
-    },
-    onTimerRing: (timer) => {
-      handleTimerRing(timer);
-    },
-    onOpenUrl: (url) => {
-      handleOpenUrl(url);
-    },
-    onClipboardSync: (text) => {
-      handleClipboardSync(text);
-    },
+    onMemoryUpdated: handleMemoryUpdated,
+    onToolExecuted: handleToolExecuted,
+    onTimerRing: handleTimerRingCallback,
+    onOpenUrl: handleOpenUrlCallback,
+    onClipboardSync: handleClipboardSyncCallback,
   });
+
+  const handleProactiveTrigger = useCallback((type: any, context: any) => {
+    sendProactiveEvent(type, context);
+  }, [sendProactiveEvent]);
 
   const {
     settings: proactiveSettings,
     triggerEvent: triggerProactiveEvent,
     updateSettings: updateProactiveSettings,
   } = useRevaProactive({
-    onProactiveTrigger: (type, context) => {
-      sendProactiveEvent(type, context);
-    },
+    onProactiveTrigger: handleProactiveTrigger,
   });
 
   const {
@@ -108,6 +120,26 @@ export const LandingPage: React.FC = () => {
   const [characterTestAnimation, setCharacterTestAnimation] = useState(false);
   const [activeDockTab, setActiveDockTab] = useState<'web' | 'notes' | 'tasks' | 'system'>('web');
   const hasTriggeredAppOpenRef = useRef(false);
+
+  const handleOpenSettings = useCallback(() => setIsSettingsOpen(true), []);
+  const handleCloseSettings = useCallback(() => setIsSettingsOpen(false), []);
+  const handleOpenMemory = useCallback(() => setIsMemoryOpen(true), []);
+  const handleCloseMemory = useCallback(() => setIsMemoryOpen(false), []);
+  const handleToggleEnergyFlare = useCallback(() => setEnergyFlareEnabled((prev) => !prev), []);
+  const handleToggleCharacterTestAnimation = useCallback(() => setCharacterTestAnimation((prev) => !prev), []);
+  const handleUpdateProactiveSettings = useCallback((settings: any) => {
+    sendProactiveSettingsUpdate(settings);
+    updateProactiveSettings(settings);
+  }, [sendProactiveSettingsUpdate, updateProactiveSettings]);
+
+  const handleCharacterClick = useCallback(() => {
+    if (voiceMode === 'OFF') {
+      setVoiceMode('MANUAL');
+      startVoiceSession();
+    } else if (sessionState === 'OFFLINE' || machineState === 'MANUAL_IDLE') {
+      startVoiceSession();
+    }
+  }, [voiceMode, sessionState, machineState, setVoiceMode, startVoiceSession]);
 
   // Trigger natural app opening interaction
   useEffect(() => {
@@ -257,7 +289,7 @@ export const LandingPage: React.FC = () => {
 
             <div className="h-5 w-[1px] bg-purple-800/50" />
 
-            <SettingsButton onClick={() => setIsSettingsOpen(true)} />
+            <SettingsButton onClick={handleOpenSettings} />
           </div>
         </div>
       </header>
@@ -278,7 +310,7 @@ export const LandingPage: React.FC = () => {
 
       {/* 3. Main Central Viewport: Centered Full-Body Anime REVA Standing on Holographic Platform */}
       <main className="relative z-10 flex-1 w-full h-full flex items-center justify-between px-6 sm:px-10 md:px-14 pointer-events-none pb-4">
-        {/* Left Section: Dialogue Card + Memory/Mood Indicator Cards Stack */}
+        {/* Left Section: Dialogue Card + Memory Indicator Stack */}
         <div className="pointer-events-auto z-20 flex flex-col items-start gap-4 pl-0 -ml-2 sm:-ml-4 md:-ml-6 py-2">
           {/* Top: Dialogue & Waveform Card */}
           <AudioVisualizer
@@ -293,7 +325,7 @@ export const LandingPage: React.FC = () => {
           <div className="flex flex-col gap-3 w-full">
             <MemoryIndicator
               memoryCount={memories.length}
-              onClick={() => setIsMemoryOpen(true)}
+              onClick={handleOpenMemory}
             />
           </div>
         </div>
@@ -314,14 +346,7 @@ export const LandingPage: React.FC = () => {
             emotionalState={diagnostics.personality?.revaEmotions}
             energyFlareEnabled={energyFlareEnabled}
             characterTestAnimation={characterTestAnimation}
-            onCharacterClick={() => {
-              if (voiceMode === 'OFF') {
-                setVoiceMode('MANUAL');
-                startVoiceSession();
-              } else if (sessionState === 'OFFLINE' || machineState === 'MANUAL_IDLE') {
-                startVoiceSession();
-              }
-            }}
+            onCharacterClick={handleCharacterClick}
           />
         </div>
 
@@ -348,7 +373,7 @@ export const LandingPage: React.FC = () => {
           <div className="flex flex-col gap-3 w-full items-end">
             <MoodIndicator
               personality={diagnostics.personality}
-              onClick={() => setIsSettingsOpen(true)}
+              onClick={handleOpenSettings}
             />
           </div>
         </div>
@@ -365,7 +390,7 @@ export const LandingPage: React.FC = () => {
       {/* Settings Modal Overlay */}
       <RevaSettingsModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={handleCloseSettings}
         diagnostics={diagnostics}
         voiceMode={voiceMode}
         machineState={machineState}
@@ -374,10 +399,7 @@ export const LandingPage: React.FC = () => {
         onSelectMode={setVoiceMode}
         proactiveSettings={diagnostics.proactive?.settings || proactiveSettings}
         systemStatus={systemStatus}
-        onUpdateProactiveSettings={(settings) => {
-          sendProactiveSettingsUpdate(settings);
-          updateProactiveSettings(settings);
-        }}
+        onUpdateProactiveSettings={handleUpdateProactiveSettings}
         onUpdateContextSettings={sendContextSettingsUpdate}
         onTestGreeting={testGreeting}
         musicSettings={musicSettings}
@@ -385,15 +407,15 @@ export const LandingPage: React.FC = () => {
         onSelectMusicMode={setMusicMode}
         onSetMusicVolume={setMusicVolume}
         energyFlareEnabled={energyFlareEnabled}
-        onToggleEnergyFlare={() => setEnergyFlareEnabled((prev) => !prev)}
+        onToggleEnergyFlare={handleToggleEnergyFlare}
         characterTestAnimation={characterTestAnimation}
-        onToggleCharacterTestAnimation={() => setCharacterTestAnimation((prev) => !prev)}
+        onToggleCharacterTestAnimation={handleToggleCharacterTestAnimation}
       />
 
       {/* Memory Modal Overlay */}
       <RevaMemoryModal
         isOpen={isMemoryOpen}
-        onClose={() => setIsMemoryOpen(false)}
+        onClose={handleCloseMemory}
         memories={memories}
         userProfile={userProfile}
         onDeleteMemory={deleteMemory}

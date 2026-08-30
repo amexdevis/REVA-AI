@@ -14,7 +14,7 @@ interface AudioVisualizerProps {
   userName?: string;
 }
 
-export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
+const AudioVisualizerComponent: React.FC<AudioVisualizerProps> = ({
   sessionState,
   userAudioLevel,
   revaAudioLevel,
@@ -119,3 +119,5 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     </div>
   );
 };
+
+export const AudioVisualizer = React.memo(AudioVisualizerComponent);

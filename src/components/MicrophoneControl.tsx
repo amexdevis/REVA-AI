@@ -27,7 +27,7 @@ interface MicrophoneControlProps {
   onSelectMode?: (mode: VoiceMode) => void;
 }
 
-export const MicrophoneControl: React.FC<MicrophoneControlProps> = ({
+const MicrophoneControlComponent: React.FC<MicrophoneControlProps> = ({
   sessionState,
   micState,
   voiceMode = 'MANUAL',
@@ -191,3 +191,5 @@ export const MicrophoneControl: React.FC<MicrophoneControlProps> = ({
     </div>
   );
 };
+
+export const MicrophoneControl = React.memo(MicrophoneControlComponent);

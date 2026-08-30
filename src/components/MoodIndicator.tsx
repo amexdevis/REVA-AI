@@ -12,7 +12,7 @@ interface MoodIndicatorProps {
   onClick: () => void;
 }
 
-export const MoodIndicator: React.FC<MoodIndicatorProps> = ({
+const MoodIndicatorComponent: React.FC<MoodIndicatorProps> = ({
   personality,
   onClick,
 }) => {
@@ -48,3 +48,5 @@ export const MoodIndicator: React.FC<MoodIndicatorProps> = ({
     </button>
   );
 };
+
+export const MoodIndicator = React.memo(MoodIndicatorComponent);

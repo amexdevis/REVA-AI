@@ -11,7 +11,7 @@ interface MemoryIndicatorProps {
   onClick: () => void;
 }
 
-export const MemoryIndicator: React.FC<MemoryIndicatorProps> = ({
+const MemoryIndicatorComponent: React.FC<MemoryIndicatorProps> = ({
   memoryCount,
   onClick,
 }) => {
@@ -42,3 +42,5 @@ export const MemoryIndicator: React.FC<MemoryIndicatorProps> = ({
     </button>
   );
 };
+
+export const MemoryIndicator = React.memo(MemoryIndicatorComponent);

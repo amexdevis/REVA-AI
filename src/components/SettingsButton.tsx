@@ -10,7 +10,7 @@ interface SettingsButtonProps {
   onClick: () => void;
 }
 
-export const SettingsButton: React.FC<SettingsButtonProps> = ({ onClick }) => {
+const SettingsButtonComponent: React.FC<SettingsButtonProps> = ({ onClick }) => {
   return (
     <button
       id="reva-settings-header-btn"
@@ -22,3 +22,5 @@ export const SettingsButton: React.FC<SettingsButtonProps> = ({ onClick }) => {
     </button>
   );
 };
+
+export const SettingsButton = React.memo(SettingsButtonComponent);

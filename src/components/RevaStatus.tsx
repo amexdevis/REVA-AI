@@ -12,7 +12,7 @@ interface RevaStatusProps {
   machineState?: VoiceMachineState;
 }
 
-export const RevaStatus: React.FC<RevaStatusProps> = ({
+const RevaStatusComponent: React.FC<RevaStatusProps> = ({
   sessionState,
   voiceMode = 'MANUAL',
   machineState,
@@ -109,3 +109,5 @@ export const RevaStatus: React.FC<RevaStatusProps> = ({
     </div>
   );
 };
+
+export const RevaStatus = React.memo(RevaStatusComponent);

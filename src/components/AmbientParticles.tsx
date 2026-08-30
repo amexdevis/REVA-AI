@@ -52,13 +52,22 @@ interface DustMote {
   driftSpeed: number;
 }
 
-export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
+export const AmbientParticlesComponent: React.FC<AmbientParticlesProps> = ({
   sessionState,
   userAudioLevel,
   revaAudioLevel,
   emotionalState = 'CALM',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const audioLevelRef = useRef({ user: userAudioLevel, reva: revaAudioLevel });
+  const sessionStateRef = useRef(sessionState);
+  const emotionalStateRef = useRef(emotionalState);
+
+  useEffect(() => {
+    audioLevelRef.current = { user: userAudioLevel, reva: revaAudioLevel };
+    sessionStateRef.current = sessionState;
+    emotionalStateRef.current = emotionalState;
+  }, [userAudioLevel, revaAudioLevel, sessionState, emotionalState]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -764,7 +773,7 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [userAudioLevel, revaAudioLevel, sessionState, emotionalState]);
+  }, []);
 
   const isSpeaking = sessionState === 'REVA_SPEAKING';
   const isListening = sessionState === 'LISTENING' || sessionState === 'USER_SPEAKING';
@@ -791,3 +800,5 @@ export const AmbientParticles: React.FC<AmbientParticlesProps> = ({
     </div>
   );
 };
+
+export const AmbientParticles = React.memo(AmbientParticlesComponent);

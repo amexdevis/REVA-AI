@@ -22,7 +22,8 @@ async function startServer() {
   setupVoiceWebSocket(wss);
 
   server.on('upgrade', (request, socket, head) => {
-    const parsedUrl = new URL(request.url || '', `http://${request.headers.host}`);
+    const host = request.headers.host || 'localhost:3000';
+    const parsedUrl = new URL(request.url || '', `http://${host}`);
     if (parsedUrl.pathname === '/api/ws/voice') {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
@@ -35,6 +36,7 @@ async function startServer() {
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
+        hmr: process.env.DISABLE_HMR === 'true' ? false : undefined,
       },
       appType: 'spa',
     });
